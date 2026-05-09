@@ -1,4 +1,6 @@
 .env
+frontend/.env.local
+frontend/.env*.local
 .venv
 __pycache__/
 *.py[cod]
@@ -7,3 +9,8 @@ __pycache__/
 api.txt
 *.db
 .DS_Store
+
+# frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/

@@ -27,6 +27,11 @@ app.add_middleware(
 app.include_router(posts.router, prefix="/api")
 
 
+@app.get("/")
+def root() -> dict[str, str]:
+    return {"message": "校园墙 API", "docs": "/docs", "health": "/health", "posts": "/api/posts"}
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
