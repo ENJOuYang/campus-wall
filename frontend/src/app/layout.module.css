@@ -1,0 +1,21 @@
+.skeleton {
+  height: var(--header-h);
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(
+    105deg,
+    var(--surface) 0%,
+    var(--muted-bg) 40%,
+    var(--surface) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.1s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
