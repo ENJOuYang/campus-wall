@@ -11,7 +11,8 @@ from app.main import limiter
 from app.models.like import Like
 from app.models.post import Post
 from app.models.report import Report
-from app.schemas.admin import AdminPostAction, AdminResolveReport
+from app.models.user import User
+from app.schemas.admin import AdminBanUser, AdminPostAction, AdminResolveReport, AdminUserRead
 from app.schemas.post import PostRead
 from app.schemas.report import ReportRead
 
@@ -137,3 +138,41 @@ def admin_resolve_report(
         report.resolved_by = "admin"
     db.commit()
     return {"message": "举报已处理"}
+
+
+# ── 用户管理 ──────────────────────────────────────────
+
+@router.get("/users", response_model=list[AdminUserRead])
+def admin_list_users(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    search: str | None = Query(None, description="搜索用户名或昵称"),
+    banned: bool | None = Query(None),
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+) -> list[AdminUserRead]:
+    query = select(User)
+    if search:
+        pattern = f"%{search}%"
+        query = query.where(User.username.ilike(pattern) | User.nickname.ilike(pattern))
+    if banned is not None:
+        query = query.where(User.is_banned == banned)
+    query = query.order_by(User.created_at.desc()).offset(skip).limit(limit)
+    rows = db.scalars(query).all()
+    return [AdminUserRead.model_validate(r) for r in rows]
+
+
+@router.patch("/users/{user_id}/ban")
+def admin_ban_user(
+    user_id: int,
+    payload: AdminBanUser,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_admin),
+) -> dict:
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    user.is_banned = payload.banned
+    db.commit()
+    action = "封禁" if payload.banned else "解封"
+    return {"message": f"用户 {user.username} 已{action}", "is_banned": payload.banned}

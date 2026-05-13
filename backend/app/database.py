@@ -47,6 +47,9 @@ def run_migration(engine):
         # reports
         _add_column_if_missing(conn, "reports", "user_id", "INTEGER REFERENCES users(id) ON DELETE SET NULL")
 
+        # users
+        _add_column_if_missing(conn, "users", "is_banned", "BOOLEAN DEFAULT 0")
+
         conn.commit()
 
 

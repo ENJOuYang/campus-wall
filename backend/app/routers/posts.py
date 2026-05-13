@@ -121,6 +121,8 @@ def create_post(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(_get_optional_user),
 ) -> PostRead:
+    if current_user and current_user.is_banned:
+        raise HTTPException(403, "您的账号已被封禁，无法发帖")
     post_status = "pending" if settings.require_approval else "approved"
     image_urls_str = json.dumps(payload.image_urls, ensure_ascii=False) if payload.image_urls else None
     post = Post(
@@ -222,6 +224,8 @@ def create_comment(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(_get_optional_user),
 ) -> CommentRead:
+    if current_user and current_user.is_banned:
+        raise HTTPException(403, "您的账号已被封禁，无法评论")
     post = db.get(Post, post_id)
     if post is None or post.status == "rejected":
         raise HTTPException(status_code=404, detail="帖子不存在")
