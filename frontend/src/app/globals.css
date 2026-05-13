@@ -1,5 +1,5 @@
 /**
- * 校园墙 · 黑白简约（偏「纸面 / 编辑台」气质）
+ * 校园墙 · 黑白简约
  * 变量集中在此，改一处即可全局换对比度。
  */
 :root {
@@ -20,7 +20,6 @@
   --shadow-sm: 0 1px 2px rgba(12, 12, 12, 0.04);
   --shadow-md: 0 6px 24px rgba(12, 12, 12, 0.06);
   --shadow-card: 0 2px 8px rgba(12, 12, 12, 0.05), 0 12px 40px rgba(12, 12, 12, 0.04);
-  /* 纯系统栈：构建/部署不依赖 Google Fonts，避免网络超时 */
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
     sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "Menlo", monospace;
@@ -67,26 +66,6 @@ body {
   background-color: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* 极淡方格纸底纹，避免整屏纯色显得「空」 */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.45;
-  background-image: linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: radial-gradient(ellipse 85% 70% at 50% -10%, #000 55%, transparent 75%);
-}
-
-@media (prefers-color-scheme: dark) {
-  body::before {
-    opacity: 0.22;
-  }
 }
 
 ::selection {

@@ -2,7 +2,6 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  height: var(--header-h);
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   backdrop-filter: blur(12px);
@@ -13,12 +12,11 @@
 .inner {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  height: 100%;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   max-width: 72rem;
   margin: 0 auto;
-  padding: 0 clamp(0.75rem, 3vw, 1.5rem);
+  padding: 0.5rem clamp(0.75rem, 3vw, 1.5rem);
 }
 
 .brand {
@@ -62,13 +60,17 @@
 }
 
 .navWrap {
-  flex: 1;
+  order: 10;
+  flex: 1 0 100%;
   min-width: 0;
-  display: flex;
-  justify-content: center;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+  margin: 0 calc(-1 * clamp(0.75rem, 3vw, 1.5rem));
+  padding-left: clamp(0.75rem, 3vw, 1.5rem);
+  padding-right: clamp(0.75rem, 3vw, 1.5rem);
 }
 
 .navWrap::-webkit-scrollbar {
@@ -84,6 +86,7 @@
   background: var(--muted-bg);
   border: 1px solid var(--border);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  width: max-content;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -125,21 +128,24 @@
 }
 
 .actions {
-  flex-shrink: 0;
+  flex: 1;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.4rem;
+  min-width: 0;
 }
 
 .btnGhost,
 .btnSolid {
   font-size: 0.78rem;
   font-weight: 600;
-  padding: 0.4rem 0.85rem;
+  padding: 0.4rem 0.75rem;
   border-radius: var(--radius-pill);
   text-decoration: none;
   cursor: pointer;
   border: 1px solid var(--border);
+  white-space: nowrap;
   transition:
     background 0.18s var(--ease-out),
     color 0.18s var(--ease-out),
@@ -159,12 +165,16 @@
 }
 
 .userTag {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--fg);
   padding: 0.25rem 0.5rem;
   border-radius: var(--radius-md);
   background: var(--muted-bg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 6rem;
 }
 
 .btnSolid {
@@ -183,28 +193,16 @@
   transform: translateY(0);
 }
 
-@media (max-width: 900px) {
-  .inner {
-    flex-wrap: wrap;
-    height: auto;
-    min-height: var(--header-h);
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
-    row-gap: 0.5rem;
+@media (max-width: 480px) {
+  .brandTag {
+    display: none;
   }
-
-  .navWrap {
-    order: 3;
-    flex: 1 0 100%;
-    justify-content: flex-start;
-    padding-top: 0.35rem;
-    border-top: 1px solid var(--border);
-    margin: 0 calc(-1 * clamp(0.75rem, 3vw, 1.5rem));
-    padding-left: clamp(0.75rem, 3vw, 1.5rem);
-    padding-right: clamp(0.75rem, 3vw, 1.5rem);
+  .btnGhost {
+    font-size: 0.72rem;
+    padding: 0.35rem 0.6rem;
   }
-
-  .nav {
-    width: max-content;
+  .userTag {
+    max-width: 4rem;
+    font-size: 0.72rem;
   }
 }
