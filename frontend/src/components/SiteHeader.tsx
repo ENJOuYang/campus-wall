@@ -4,14 +4,11 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { NAV_TABS, parseTab } from "@/lib/categories";
 import { useAuth } from "@/lib/auth-context";
-import { useSearch } from "@/lib/search-context";
-import { SearchInput } from "./SearchInput";
 import styles from "./SiteHeader.module.css";
 
 export function SiteHeader() {
   const searchParams = useSearchParams();
   const active = parseTab(searchParams.get("tab") ?? undefined);
-  const { query, setQuery } = useSearch();
   const { user, loading, logout } = useAuth();
   const router = useRouter();
 
@@ -45,7 +42,6 @@ export function SiteHeader() {
         </nav>
 
         <div className={styles.actions}>
-          <SearchInput value={query} onChange={setQuery} />
           {!loading && (
             <>
               {user ? (
