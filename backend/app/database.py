@@ -20,17 +20,18 @@ def run_migration(engine):
     import sqlalchemy as sa
 
     inspector = sa.inspect(engine)
-    if not inspector.has_table("posts"):
-        return
-    columns = {c["name"] for c in inspector.get_columns("posts")}
     with engine.connect() as conn:
-        if "image_urls" not in columns:
-            conn.execute(sa.text("ALTER TABLE posts ADD COLUMN image_urls TEXT"))
-        if "view_count" not in columns:
-            conn.execute(sa.text("ALTER TABLE posts ADD COLUMN view_count INTEGER DEFAULT 0"))
-        if "status" not in columns:
-            conn.execute(sa.text("ALTER TABLE posts ADD COLUMN status VARCHAR(20) DEFAULT 'approved'"))
-        conn.commit()
+        if inspector.has_table("posts"):
+            columns = {c["name"] for c in inspector.get_columns("posts")}
+            if "image_urls" not in columns:
+                conn.execute(sa.text("ALTER TABLE posts ADD COLUMN image_urls TEXT"))
+            if "view_count" not in columns:
+                conn.execute(sa.text("ALTER TABLE posts ADD COLUMN view_count INTEGER DEFAULT 0"))
+            if "status" not in columns:
+                conn.execute(sa.text("ALTER TABLE posts ADD COLUMN status VARCHAR(20) DEFAULT 'approved'"))
+            if "ticket_status" not in columns:
+                conn.execute(sa.text("ALTER TABLE posts ADD COLUMN ticket_status VARCHAR(20)"))
+            conn.commit()
 
 
 def get_db() -> Generator[Session, None, None]:

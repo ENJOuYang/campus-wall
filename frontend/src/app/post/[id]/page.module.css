@@ -52,6 +52,12 @@
   border: 1px solid var(--border);
 }
 
+.ticketBadge {
+  color: var(--bg);
+  background: var(--fg);
+  border-color: var(--fg);
+}
+
 .stat {
   font-family: var(--font-mono);
   font-size: 0.65rem;

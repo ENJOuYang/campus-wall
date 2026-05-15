@@ -11,3 +11,11 @@ class AdminPostAction(BaseModel):
 
 class AdminResolveReport(BaseModel):
     resolved: bool = True
+
+
+class AdminUserAction(BaseModel):
+    fingerprint: str = Field(..., min_length=1, max_length=64)
+
+
+class TicketStatusAction(BaseModel):
+    ticket_status: str = Field(..., pattern="^(open|processing|completed|closed)$")

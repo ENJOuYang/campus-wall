@@ -39,3 +39,15 @@ export function filterPostsByTab(items: Post[], tab: NavTabSlug): Post[] {
   if (tab === "all" || tab === "hot") return items;
   return items.filter((p) => p.category === tab);
 }
+
+const TICKET_STATUS_LABELS: Record<string, string> = {
+  open: "待处理",
+  processing: "处理中",
+  completed: "已完成",
+  closed: "已关闭",
+};
+
+export function ticketStatusLabel(status: string | null): string {
+  if (!status) return "待处理";
+  return TICKET_STATUS_LABELS[status] ?? status;
+}

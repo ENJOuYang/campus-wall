@@ -21,6 +21,7 @@ class PostRead(BaseModel):
     like_count: int = 0
     is_liked: bool = False
     status: str = "approved"
+    ticket_status: str | None = None
 
     model_config = {"from_attributes": True}
 

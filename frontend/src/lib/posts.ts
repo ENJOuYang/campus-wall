@@ -9,6 +9,7 @@ export type Post = {
   like_count: number;
   is_liked: boolean;
   status: string;
+  ticket_status: string | null;
 };
 
 export type PostListResponse = {
@@ -151,10 +152,24 @@ export function setAdminToken(token: string): void {
 
 export function clearAdminToken(): void {
   sessionStorage.removeItem("admin_token");
+  sessionStorage.removeItem("admin_role");
 }
 
 export function hasAdminToken(): boolean {
   return !!getAdminToken();
+}
+
+export function setAdminRole(role: string): void {
+  sessionStorage.setItem("admin_role", role);
+}
+
+export function getAdminRole(): string {
+  if (typeof window === "undefined") return "";
+  return sessionStorage.getItem("admin_role") ?? "";
+}
+
+export function isSuperAdmin(): boolean {
+  return getAdminRole() === "super_admin";
 }
 
 async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
@@ -173,12 +188,54 @@ async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
   return res;
 }
 
-export async function adminLogin(token: string): Promise<boolean> {
+export async function adminLogin(token: string): Promise<{ ok: boolean; role?: string }> {
   const res = await fetch(`${getBackendBaseUrl()}/api/admin/login`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
-  return res.ok;
+  if (!res.ok) return { ok: false };
+  const data = await res.json();
+  return { ok: true, role: data.role };
+}
+
+export async function adminFetchUsers(): Promise<{ id: number; fingerprint: string; role: string; created_at: string }[]> {
+  const res = await adminFetch("/api/admin/users");
+  if (!res.ok) throw new Error("加载失败");
+  return res.json();
+}
+
+export async function adminAddUser(fingerprint: string): Promise<void> {
+  const res = await adminFetch("/api/admin/users", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fingerprint }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(t || "添加失败");
+  }
+}
+
+export async function adminRemoveUser(fingerprint: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/users/${encodeURIComponent(fingerprint)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(t || "移除失败");
+  }
+}
+
+export async function adminSetTicketStatus(postId: number, ticketStatus: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/posts/${postId}/ticket-status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ticket_status: ticketStatus }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(t || "操作失败");
+  }
 }
 
 export async function adminFetchPosts(status?: string): Promise<Post[]> {

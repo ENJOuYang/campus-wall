@@ -2,11 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { uploadImage } from "@/lib/posts";
+import { hasAdminToken, uploadImage } from "@/lib/posts";
+
+function getAdminToken(): string {
+  if (typeof window === "undefined") return "";
+  return sessionStorage.getItem("admin_token") ?? "";
+}
 import styles from "./PostForm.module.css";
 
 export function PostForm() {
   const router = useRouter();
+  const isAdmin = hasAdminToken();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
@@ -62,9 +68,12 @@ export function PostForm() {
               const url = await uploadImage(file);
               uploadedUrls.push(url);
             }
+            const headers: Record<string, string> = { "Content-Type": "application/json" };
+            const token = getAdminToken();
+            if (token) headers["Authorization"] = `Bearer ${token}`;
             const res = await fetch("/api/posts", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers,
               body: JSON.stringify({ title, body, category, image_urls: uploadedUrls }),
             });
             if (!res.ok) {
@@ -102,7 +111,7 @@ export function PostForm() {
           <select id="cw-category" name="category" defaultValue="casual">
             <option value="casual">日常灌水</option>
             <option value="study">学习·文化课</option>
-            <option value="notice">公告</option>
+            {isAdmin && <option value="notice">公告</option>}
             <option value="ticket">工单</option>
           </select>
         </div>

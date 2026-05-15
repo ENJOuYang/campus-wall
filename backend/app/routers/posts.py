@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from app.models.comment import Comment
 from app.models.like import Like
 from app.models.post import Post
 from app.models.report import Report
+from app.models.user import User
 from app.schemas.comment import CommentCreate, CommentRead
 from app.schemas.like import LikeCreate, LikeToggleResponse
 from app.schemas.post import PostCreate, PostList, PostRead
@@ -45,6 +46,7 @@ def _post_to_read(post: Post, db: Session, fingerprint: str | None = None) -> Po
         like_count=like_count,
         is_liked=is_liked,
         status=post.status,
+        ticket_status=post.ticket_status,
     )
 
 
@@ -90,15 +92,32 @@ def get_post(
 
 
 @router.post("", response_model=PostRead, status_code=201)
-def create_post(payload: PostCreate, db: Session = Depends(get_db)) -> PostRead:
+def create_post(
+    payload: PostCreate,
+    db: Session = Depends(get_db),
+    authorization: str | None = Header(None),
+) -> PostRead:
+    if payload.category == "notice":
+        is_admin = False
+        if authorization:
+            token = authorization.removeprefix("Bearer ").strip()
+            if settings.admin_token and token == settings.admin_token:
+                is_admin = True
+            elif db.scalar(select(User).where(User.fingerprint == token, User.role == "admin")):
+                is_admin = True
+        if not is_admin:
+            raise HTTPException(403, "仅管理员可发布公告")
+
     post_status = "pending" if settings.require_approval else "approved"
     image_urls_str = json.dumps(payload.image_urls, ensure_ascii=False) if payload.image_urls else None
+    ticket_status = "open" if payload.category == "ticket" else None
     post = Post(
         title=payload.title,
         body=payload.body,
         category=payload.category,
         image_urls=image_urls_str,
         status=post_status,
+        ticket_status=ticket_status,
     )
     db.add(post)
     db.commit()

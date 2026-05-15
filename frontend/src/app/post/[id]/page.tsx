@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Post } from "@/lib/posts";
 import { fetchPostById, formatRelativeTime, incrementView } from "@/lib/posts";
-import { categoryLabel } from "@/lib/categories";
+import { categoryLabel, ticketStatusLabel } from "@/lib/categories";
 import { getFingerprint } from "@/lib/fingerprint";
 import { LikeButton } from "@/components/LikeButton";
 import { CommentSection } from "@/components/CommentSection";
@@ -89,6 +89,9 @@ export default function PostDetailPage() {
         <div className={styles.head}>
           <span>#{post.id}</span>
           <span className={styles.badge}>{categoryLabel(post.category)}</span>
+          {post.category === "ticket" && post.ticket_status && (
+            <span className={`${styles.badge} ${styles.ticketBadge}`}>{ticketStatusLabel(post.ticket_status)}</span>
+          )}
           <time dateTime={post.created_at}>{formatRelativeTime(post.created_at)}</time>
           <span className={styles.stat}>{viewCount} 次浏览</span>
         </div>

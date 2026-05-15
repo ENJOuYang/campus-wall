@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { adminLogin, setAdminToken } from "@/lib/posts";
+import { adminLogin, setAdminToken, setAdminRole } from "@/lib/posts";
 import styles from "./page.module.css";
 
 export default function AdminLoginPage() {
@@ -17,9 +17,10 @@ export default function AdminLoginPage() {
     setPending(true);
     setError(null);
     try {
-      const ok = await adminLogin(token.trim());
-      if (ok) {
+      const result = await adminLogin(token.trim());
+      if (result.ok) {
         setAdminToken(token.trim());
+        if (result.role) setAdminRole(result.role);
         router.push("/admin");
       } else {
         setError("令牌无效");

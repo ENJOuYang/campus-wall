@@ -2,26 +2,54 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Post, Report } from "@/lib/posts";
 import {
-  adminActOnPost, adminFetchPosts, adminFetchReports, adminResolveReport,
-  clearAdminToken, formatRelativeTime, hasAdminToken,
+  adminActOnPost,
+  adminAddUser,
+  adminFetchPosts,
+  adminFetchReports,
+  adminFetchUsers,
+  adminRemoveUser,
+  adminResolveReport,
+  adminSetTicketStatus,
+  clearAdminToken,
+  formatRelativeTime,
+  hasAdminToken,
+  isSuperAdmin,
 } from "@/lib/posts";
-import { categoryLabel } from "@/lib/categories";
+import { categoryLabel, ticketStatusLabel } from "@/lib/categories";
 import styles from "./page.module.css";
 
-type Tab = "posts" | "reports";
+type Tab = "posts" | "reports" | "users";
+
+const TICKET_STATUS_OPTIONS = [
+  { value: "open", label: "待处理" },
+  { value: "processing", label: "处理中" },
+  { value: "completed", label: "已完成" },
+  { value: "closed", label: "已关闭" },
+];
+
+type AdminUser = {
+  id: number;
+  fingerprint: string;
+  role: string;
+  created_at: string;
+};
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("posts");
   const [posts, setPosts] = useState<Post[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [postStatus, setPostStatus] = useState<string>("");
   const [reportFilter, setReportFilter] = useState<boolean | undefined>(undefined);
+  const [newFingerprint, setNewFingerprint] = useState("");
+  const superAdmin = isSuperAdmin();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!hasAdminToken()) { router.push("/admin/login"); return; }
@@ -32,7 +60,8 @@ export default function AdminDashboardPage() {
     setLoading(true); setError(null);
     try {
       if (tab === "posts") setPosts(await adminFetchPosts(postStatus || undefined));
-      else setReports(await adminFetchReports(reportFilter));
+      else if (tab === "reports") setReports(await adminFetchReports(reportFilter));
+      else if (tab === "users") setUsers(await adminFetchUsers());
     } catch (e) {
       setError(e instanceof Error ? e.message : "加载失败");
     } finally { setLoading(false); }
@@ -48,7 +77,27 @@ export default function AdminDashboardPage() {
     catch (e) { setError(e instanceof Error ? e.message : "操作失败"); }
   };
 
+  const handleTicketStatus = async (postId: number, status: string) => {
+    try { await adminSetTicketStatus(postId, status); loadData(); }
+    catch (e) { setError(e instanceof Error ? e.message : "操作失败"); }
+  };
+
+  const handleAddAdmin = async () => {
+    const fp = newFingerprint.trim();
+    if (!fp) return;
+    try { await adminAddUser(fp); setNewFingerprint(""); loadData(); inputRef.current?.focus(); }
+    catch (e) { setError(e instanceof Error ? e.message : "添加失败"); }
+  };
+
+  const handleRemoveAdmin = async (fingerprint: string) => {
+    if (!confirm(`确定移除管理员 ${fingerprint.slice(0, 12)}… 吗？`)) return;
+    try { await adminRemoveUser(fingerprint); loadData(); }
+    catch (e) { setError(e instanceof Error ? e.message : "移除失败"); }
+  };
+
   const handleLogout = () => { clearAdminToken(); router.push("/admin/login"); };
+
+  const tabs: Tab[] = superAdmin ? ["posts", "reports", "users"] : ["posts", "reports"];
 
   return (
     <main className={styles.main}>
@@ -58,9 +107,9 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className={styles.tabs}>
-        {(["posts", "reports"] as Tab[]).map((t) => (
+        {tabs.map((t) => (
           <button key={t} className={`${styles.tab} ${tab === t ? styles.tabActive : ""}`} onClick={() => setTab(t)}>
-            {t === "posts" ? "帖子管理" : "举报管理"}
+            {t === "posts" ? "帖子管理" : t === "reports" ? "举报管理" : "用户管理"}
           </button>
         ))}
       </div>
@@ -88,7 +137,7 @@ export default function AdminDashboardPage() {
       {error ? <p className={styles.errorMsg}>{error}</p> : loading ? <p className={styles.loading}>加载中…</p> : tab === "posts" ? (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
-            <thead><tr><th>ID</th><th>标题</th><th>分区</th><th>状态</th><th>浏览</th><th>点赞</th><th>时间</th><th>操作</th></tr></thead>
+            <thead><tr><th>ID</th><th>标题</th><th>分区</th><th>状态</th><th>工单状态</th><th>浏览</th><th>点赞</th><th>时间</th><th>操作</th></tr></thead>
             <tbody>
               {posts.map((p) => (
                 <tr key={p.id}>
@@ -96,6 +145,20 @@ export default function AdminDashboardPage() {
                   <td><Link href={`/post/${p.id}`} className={styles.postLink}>{p.title.slice(0, 30)}{p.title.length > 30 ? "…" : ""}</Link></td>
                   <td className={styles.muted}>{categoryLabel(p.category)}</td>
                   <td><span className={`${styles.statusTag} ${p.status === "approved" ? styles.statusApproved : p.status === "pending" ? styles.statusPending : styles.statusRejected}`}>{p.status === "approved" ? "已通过" : p.status === "pending" ? "待审核" : "已拒绝"}</span></td>
+                  <td>
+                    {p.category === "ticket" ? (
+                      <select
+                        className={styles.select}
+                        value={p.ticket_status ?? "open"}
+                        onChange={(e) => handleTicketStatus(p.id, e.target.value)}
+                        style={{ fontSize: "0.7rem", padding: "0.15rem 0.3rem" }}
+                      >
+                        {TICKET_STATUS_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    ) : <span className={styles.muted}>—</span>}
+                  </td>
                   <td className={styles.mono}>{p.view_count}</td>
                   <td className={styles.mono}>{p.like_count}</td>
                   <td className={styles.muted}>{formatRelativeTime(p.created_at)}</td>
@@ -108,11 +171,11 @@ export default function AdminDashboardPage() {
                   </td>
                 </tr>
               ))}
-              {posts.length === 0 && <tr><td colSpan={8} className={styles.empty}>暂无数据</td></tr>}
+              {posts.length === 0 && <tr><td colSpan={9} className={styles.empty}>暂无数据</td></tr>}
             </tbody>
           </table>
         </div>
-      ) : (
+      ) : tab === "reports" ? (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
             <thead><tr><th>ID</th><th>帖子ID</th><th>举报原因</th><th>举报人</th><th>时间</th><th>状态</th><th>操作</th></tr></thead>
@@ -131,6 +194,41 @@ export default function AdminDashboardPage() {
               {reports.length === 0 && <tr><td colSpan={7} className={styles.empty}>暂无数据</td></tr>}
             </tbody>
           </table>
+        </div>
+      ) : (
+        <div>
+          <div className={styles.filterRow} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <input
+              ref={inputRef}
+              className={styles.select}
+              style={{ flex: 1, maxWidth: "24rem", fontFamily: "var(--font-mono)" }}
+              type="text"
+              value={newFingerprint}
+              onChange={(e) => setNewFingerprint(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleAddAdmin(); }}
+              placeholder="输入用户 fingerprint 以添加为管理员"
+            />
+            <button className={styles.btnApprove} onClick={handleAddAdmin}>添加</button>
+          </div>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead><tr><th>ID</th><th>Fingerprint</th><th>角色</th><th>添加时间</th><th>操作</th></tr></thead>
+              <tbody>
+                {users.map((u) => (
+                  <tr key={u.id}>
+                    <td className={styles.mono}>#{u.id}</td>
+                    <td className={styles.mono} style={{ fontSize: "0.72rem" }}>{u.fingerprint}</td>
+                    <td>{u.role === "admin" ? "管理员" : u.role}</td>
+                    <td className={styles.muted}>{formatRelativeTime(u.created_at)}</td>
+                    <td>
+                      <button className={styles.btnDelete} onClick={() => handleRemoveAdmin(u.fingerprint)}>移除</button>
+                    </td>
+                  </tr>
+                ))}
+                {users.length === 0 && <tr><td colSpan={5} className={styles.empty}>暂无管理员</td></tr>}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </main>
