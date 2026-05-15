@@ -25,7 +25,6 @@ export function PostForm() {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fsTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const previewsRef = useRef<string[]>([]);
 
   useEffect(() => {
@@ -39,15 +38,25 @@ export function PostForm() {
     };
   }, []);
 
-  const handleFileChange = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const newFiles = Array.from(files);
-    setSelectedFiles((prev) => [...prev, ...newFiles].slice(0, 9));
-    setPreviews((prev) => {
-      const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
-      return [...prev, ...newPreviews].slice(0, 9);
+  const handleAddFiles = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const incoming = Array.from(fileList);
+    setSelectedFiles((prev) => {
+      const merged = [...prev];
+      for (const f of incoming) {
+        if (merged.length >= 9) break;
+        merged.push(f);
+      }
+      return merged;
     });
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    setPreviews((prev) => {
+      const merged = [...prev];
+      for (const f of incoming) {
+        if (merged.length >= 9) break;
+        merged.push(URL.createObjectURL(f));
+      }
+      return merged;
+    });
   };
 
   const removeFile = (index: number) => {
@@ -185,12 +194,11 @@ export function PostForm() {
         <div className={styles.row}>
           <label htmlFor="cw-images">图片（可选，最多 9 张）</label>
           <input
-            ref={fileInputRef}
             id="cw-images"
             type="file"
             accept="image/*"
             multiple
-            onChange={(e) => handleFileChange(e.target.files)}
+            onChange={(e) => handleAddFiles(e.target.files)}
             className={styles.fileInput}
           />
         </div>
