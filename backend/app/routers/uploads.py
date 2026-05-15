@@ -1,9 +1,10 @@
 import os
 import uuid
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from app.config import settings
+from app.config import limiter
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
@@ -12,7 +13,8 @@ MAX_FILE_SIZE = 5 * 1024 * 1024
 
 
 @router.post("")
-async def upload_image(file: UploadFile = File(...)) -> dict:
+@limiter.limit("10/minute")
+async def upload_image(request: Request, file: UploadFile = File(...)) -> dict:
     ext = os.path.splitext(file.filename or "image.jpg")[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(400, f"不支持的文件类型: {ext}")

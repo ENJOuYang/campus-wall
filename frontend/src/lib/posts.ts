@@ -1,3 +1,8 @@
+export type AuthorInfo = {
+  username: string;
+  nickname: string;
+};
+
 export type Post = {
   id: number;
   title: string;
@@ -10,6 +15,7 @@ export type Post = {
   is_liked: boolean;
   status: string;
   ticket_status: string | null;
+  author: AuthorInfo | null;
 };
 
 export type PostListResponse = {
@@ -23,6 +29,7 @@ export type Comment = {
   body: string;
   fingerprint: string;
   created_at: string;
+  author: AuthorInfo | null;
 };
 
 export type Report = {
@@ -37,6 +44,9 @@ export type Report = {
 };
 
 export function getBackendBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    return process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
+  }
   return process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 }
 
@@ -198,14 +208,14 @@ export async function adminLogin(token: string): Promise<{ ok: boolean; role?: s
   return { ok: true, role: data.role };
 }
 
-export async function adminFetchUsers(): Promise<{ id: number; fingerprint: string; role: string; created_at: string }[]> {
-  const res = await adminFetch("/api/admin/users");
+export async function adminFetchAdmins(): Promise<{ id: number; fingerprint: string; role: string; created_at: string }[]> {
+  const res = await adminFetch("/api/admin/admins");
   if (!res.ok) throw new Error("加载失败");
   return res.json();
 }
 
-export async function adminAddUser(fingerprint: string): Promise<void> {
-  const res = await adminFetch("/api/admin/users", {
+export async function adminAddAdmin(fingerprint: string): Promise<void> {
+  const res = await adminFetch("/api/admin/admins", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fingerprint }),
@@ -216,8 +226,8 @@ export async function adminAddUser(fingerprint: string): Promise<void> {
   }
 }
 
-export async function adminRemoveUser(fingerprint: string): Promise<void> {
-  const res = await adminFetch(`/api/admin/users/${encodeURIComponent(fingerprint)}`, {
+export async function adminRemoveAdmin(fingerprint: string): Promise<void> {
+  const res = await adminFetch(`/api/admin/admins/${encodeURIComponent(fingerprint)}`, {
     method: "DELETE",
   });
   if (!res.ok) {

@@ -6,11 +6,11 @@ import { useEffect, useRef, useState } from "react";
 import type { Post, Report } from "@/lib/posts";
 import {
   adminActOnPost,
-  adminAddUser,
+  adminAddAdmin,
   adminFetchPosts,
   adminFetchReports,
-  adminFetchUsers,
-  adminRemoveUser,
+  adminFetchAdmins,
+  adminRemoveAdmin,
   adminResolveReport,
   adminSetTicketStatus,
   clearAdminToken,
@@ -61,7 +61,7 @@ export default function AdminDashboardPage() {
     try {
       if (tab === "posts") setPosts(await adminFetchPosts(postStatus || undefined));
       else if (tab === "reports") setReports(await adminFetchReports(reportFilter));
-      else if (tab === "users") setUsers(await adminFetchUsers());
+      else if (tab === "users") setUsers(await adminFetchAdmins());
     } catch (e) {
       setError(e instanceof Error ? e.message : "加载失败");
     } finally { setLoading(false); }
@@ -85,13 +85,13 @@ export default function AdminDashboardPage() {
   const handleAddAdmin = async () => {
     const fp = newFingerprint.trim();
     if (!fp) return;
-    try { await adminAddUser(fp); setNewFingerprint(""); loadData(); inputRef.current?.focus(); }
+    try { await adminAddAdmin(fp); setNewFingerprint(""); loadData(); inputRef.current?.focus(); }
     catch (e) { setError(e instanceof Error ? e.message : "添加失败"); }
   };
 
   const handleRemoveAdmin = async (fingerprint: string) => {
     if (!confirm(`确定移除管理员 ${fingerprint.slice(0, 12)}… 吗？`)) return;
-    try { await adminRemoveUser(fingerprint); loadData(); }
+    try { await adminRemoveAdmin(fingerprint); loadData(); }
     catch (e) { setError(e instanceof Error ? e.message : "移除失败"); }
   };
 

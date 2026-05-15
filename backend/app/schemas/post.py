@@ -3,6 +3,11 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 
+class AuthorInfo(BaseModel):
+    username: str
+    nickname: str
+
+
 class PostCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     body: str = Field(..., min_length=1, max_length=10000)
@@ -22,6 +27,7 @@ class PostRead(BaseModel):
     is_liked: bool = False
     status: str = "approved"
     ticket_status: str | None = None
+    author: AuthorInfo | None = None
 
     model_config = {"from_attributes": True}
 

@@ -82,6 +82,22 @@ export function PostList({ initialItems, initialTotal, tab }: Props) {
     }
   }, [allItems.length, tab]);
 
+  // Refresh with fingerprint on mount so likes persist across page loads
+  useEffect(() => {
+    const refresh = async () => {
+      try {
+        const sort = tab === "hot" ? "hot" : "latest";
+        const data = await fetchPostList(0, initialItems.length || PAGE_SIZE, sort, fp.current);
+        setAllItems(data.items);
+        setTotal(data.total);
+      } catch {
+        // keep initial data on error
+      }
+    };
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     setAllItems(initialItems);
     setTotal(initialTotal);

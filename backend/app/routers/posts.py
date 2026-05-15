@@ -1,11 +1,13 @@
 import json
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.auth import decode_access_token
 from app.config import settings
 from app.database import get_db
+from app.config import limiter
 from app.models.comment import Comment
 from app.models.like import Like
 from app.models.post import Post
@@ -13,10 +15,37 @@ from app.models.report import Report
 from app.models.user import User
 from app.schemas.comment import CommentCreate, CommentRead
 from app.schemas.like import LikeCreate, LikeToggleResponse
-from app.schemas.post import PostCreate, PostList, PostRead
+from app.schemas.post import AuthorInfo, PostCreate, PostList, PostRead
 from app.schemas.report import ReportCreate
 
 router = APIRouter(prefix="/posts", tags=["posts"])
+
+
+def _get_author(post: Post, db: Session) -> AuthorInfo | None:
+    if post.user_id:
+        user = db.get(User, post.user_id)
+        if user:
+            return AuthorInfo(username=user.username, nickname=user.nickname)
+    return None
+
+
+def _get_optional_user(authorization: str | None = Header(None), db: Session = Depends(get_db)) -> User | None:
+    if not authorization:
+        return None
+    token = authorization.removeprefix("Bearer ").strip()
+    user_id = decode_access_token(token)
+    if user_id is None:
+        return None
+    return db.get(User, user_id)
+
+
+def _is_admin(authorization: str | None, db: Session) -> bool:
+    if not authorization:
+        return False
+    token = authorization.removeprefix("Bearer ").strip()
+    if settings.admin_token and token == settings.admin_token:
+        return True
+    return bool(db.scalar(select(User).where(User.fingerprint == token, User.role == "admin")))
 
 
 def _parse_image_urls(post: Post) -> list[str]:
@@ -47,11 +76,13 @@ def _post_to_read(post: Post, db: Session, fingerprint: str | None = None) -> Po
         is_liked=is_liked,
         status=post.status,
         ticket_status=post.ticket_status,
+        author=_get_author(post, db),
     )
 
 
 @router.get("", response_model=PostList)
 def list_posts(
+    request: Request,
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
@@ -81,6 +112,7 @@ def list_posts(
 
 @router.get("/{post_id}", response_model=PostRead)
 def get_post(
+    request: Request,
     post_id: int,
     db: Session = Depends(get_db),
     fingerprint: str | None = Query(None),
@@ -92,21 +124,19 @@ def get_post(
 
 
 @router.post("", response_model=PostRead, status_code=201)
+@limiter.limit("5/minute")
 def create_post(
+    request: Request,
     payload: PostCreate,
     db: Session = Depends(get_db),
+    current_user: User | None = Depends(_get_optional_user),
     authorization: str | None = Header(None),
 ) -> PostRead:
-    if payload.category == "notice":
-        is_admin = False
-        if authorization:
-            token = authorization.removeprefix("Bearer ").strip()
-            if settings.admin_token and token == settings.admin_token:
-                is_admin = True
-            elif db.scalar(select(User).where(User.fingerprint == token, User.role == "admin")):
-                is_admin = True
-        if not is_admin:
-            raise HTTPException(403, "仅管理员可发布公告")
+    if current_user and current_user.is_banned:
+        raise HTTPException(403, "您的账号已被封禁，无法发帖")
+
+    if payload.category == "notice" and not _is_admin(authorization, db):
+        raise HTTPException(403, "仅管理员可发布公告")
 
     post_status = "pending" if settings.require_approval else "approved"
     image_urls_str = json.dumps(payload.image_urls, ensure_ascii=False) if payload.image_urls else None
@@ -118,6 +148,7 @@ def create_post(
         image_urls=image_urls_str,
         status=post_status,
         ticket_status=ticket_status,
+        user_id=current_user.id if current_user else None,
     )
     db.add(post)
     db.commit()
@@ -126,7 +157,8 @@ def create_post(
 
 
 @router.post("/{post_id}/view")
-def increment_view(post_id: int, db: Session = Depends(get_db)) -> dict:
+@limiter.limit("60/minute")
+def increment_view(request: Request, post_id: int, db: Session = Depends(get_db)) -> dict:
     post = db.get(Post, post_id)
     if post is None:
         raise HTTPException(status_code=404, detail="帖子不存在")
@@ -136,19 +168,37 @@ def increment_view(post_id: int, db: Session = Depends(get_db)) -> dict:
 
 
 @router.post("/{post_id}/like", response_model=LikeToggleResponse)
-def toggle_like(post_id: int, payload: LikeCreate, db: Session = Depends(get_db)) -> LikeToggleResponse:
+@limiter.limit("30/minute")
+def toggle_like(
+    request: Request,
+    post_id: int,
+    payload: LikeCreate,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(_get_optional_user),
+) -> LikeToggleResponse:
     post = db.get(Post, post_id)
     if post is None or post.status == "rejected":
         raise HTTPException(status_code=404, detail="帖子不存在")
+
+    # Check by fingerprint first, then by user_id
     existing = db.scalar(
         select(Like).where(Like.post_id == post_id, Like.fingerprint == payload.fingerprint)
     )
+    if current_user and not existing:
+        existing = db.scalar(
+            select(Like).where(Like.post_id == post_id, Like.user_id == current_user.id)
+        )
+
     if existing:
         db.delete(existing)
         db.commit()
         liked = False
     else:
-        db.add(Like(post_id=post_id, fingerprint=payload.fingerprint))
+        db.add(Like(
+            post_id=post_id,
+            fingerprint=payload.fingerprint,
+            user_id=current_user.id if current_user else None,
+        ))
         db.commit()
         liked = True
     count = db.scalar(select(func.count()).select_from(Like).where(Like.post_id == post_id)) or 0
@@ -156,34 +206,79 @@ def toggle_like(post_id: int, payload: LikeCreate, db: Session = Depends(get_db)
 
 
 @router.get("/{post_id}/comments", response_model=list[CommentRead])
-def list_comments(post_id: int, db: Session = Depends(get_db)) -> list[CommentRead]:
+def list_comments(
+    request: Request,
+    post_id: int,
+    db: Session = Depends(get_db),
+) -> list[CommentRead]:
     post = db.get(Post, post_id)
     if post is None or post.status == "rejected":
         raise HTTPException(status_code=404, detail="帖子不存在")
     rows = db.scalars(
         select(Comment).where(Comment.post_id == post_id).order_by(Comment.created_at.asc())
     ).all()
-    return [CommentRead.model_validate(r) for r in rows]
+    result = []
+    for r in rows:
+        comment_dict = CommentRead.model_validate(r).model_dump()
+        if r.user_id:
+            user = db.get(User, r.user_id)
+            if user:
+                comment_dict["author"] = {"username": user.username, "nickname": user.nickname}
+            else:
+                comment_dict["author"] = None
+        else:
+            comment_dict["author"] = None
+        result.append(CommentRead(**comment_dict))
+    return result
 
 
 @router.post("/{post_id}/comments", response_model=CommentRead, status_code=201)
-def create_comment(post_id: int, payload: CommentCreate, db: Session = Depends(get_db)) -> CommentRead:
+@limiter.limit("10/minute")
+def create_comment(
+    request: Request,
+    post_id: int,
+    payload: CommentCreate,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(_get_optional_user),
+) -> CommentRead:
+    if current_user and current_user.is_banned:
+        raise HTTPException(403, "您的账号已被封禁，无法评论")
     post = db.get(Post, post_id)
     if post is None or post.status == "rejected":
         raise HTTPException(status_code=404, detail="帖子不存在")
-    comment = Comment(post_id=post_id, body=payload.body, fingerprint=payload.fingerprint)
+    comment = Comment(
+        post_id=post_id,
+        body=payload.body,
+        fingerprint=payload.fingerprint,
+        user_id=current_user.id if current_user else None,
+    )
     db.add(comment)
     db.commit()
     db.refresh(comment)
-    return CommentRead.model_validate(comment)
+    result = CommentRead.model_validate(comment)
+    if current_user:
+        result.author = AuthorInfo(username=current_user.username, nickname=current_user.nickname)
+    return result
 
 
 @router.post("/{post_id}/report", status_code=201)
-def create_report(post_id: int, payload: ReportCreate, db: Session = Depends(get_db)) -> dict:
+@limiter.limit("5/minute")
+def create_report(
+    request: Request,
+    post_id: int,
+    payload: ReportCreate,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(_get_optional_user),
+) -> dict:
     post = db.get(Post, post_id)
     if post is None:
         raise HTTPException(status_code=404, detail="帖子不存在")
-    report = Report(post_id=post_id, reason=payload.reason, fingerprint=payload.fingerprint)
+    report = Report(
+        post_id=post_id,
+        reason=payload.reason,
+        fingerprint=payload.fingerprint,
+        user_id=current_user.id if current_user else None,
+    )
     db.add(report)
     db.commit()
     return {"message": "举报已提交"}

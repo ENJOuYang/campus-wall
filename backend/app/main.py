@@ -1,13 +1,16 @@
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
 
-from app.config import settings
+from app.config import settings, limiter
 from app.database import Base, engine, run_migration
-from app.routers import posts, uploads, admin
+from app.routers import posts, uploads, admin, auth
+
 
 
 @asynccontextmanager
@@ -18,6 +21,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
+app.state.limiter = limiter
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,9 +31,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.exception_handler(RateLimitExceeded)
+async def _rate_limit_handler(_request: Request, _exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "请求太频繁，请稍后再试。"},
+    )
+
+
 app.include_router(posts.router, prefix="/api")
 app.include_router(uploads.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
 
 os.makedirs(settings.upload_dir, exist_ok=True)
 app.mount("/api/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")

@@ -1,21 +1,37 @@
 import json
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
+from app.config import limiter
 from app.models.like import Like
 from app.models.post import Post
 from app.models.report import Report
 from app.models.user import User
-from app.schemas.admin import AdminPostAction, AdminResolveReport, AdminUserAction, TicketStatusAction
-from app.schemas.post import PostRead
+from app.schemas.admin import (
+    AdminBanUser,
+    AdminPostAction,
+    AdminResolveReport,
+    AdminUserAction,
+    AdminUserRead,
+    TicketStatusAction,
+)
+from app.schemas.post import AuthorInfo, PostRead
 from app.schemas.report import ReportRead
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def _get_author(post: Post, db: Session) -> AuthorInfo | None:
+    if post.user_id:
+        user = db.get(User, post.user_id)
+        if user:
+            return AuthorInfo(username=user.username, nickname=user.nickname)
+    return None
 
 
 def _is_super_admin(token: str) -> bool:
@@ -42,7 +58,6 @@ def verify_admin(
     authorization: str = Header(None),
     db: Session = Depends(get_db),
 ) -> str:
-    """Returns admin fingerprint if regular admin, or empty string if super admin."""
     if not settings.admin_token:
         raise HTTPException(403, "管理员功能未启用")
     if not authorization:
@@ -56,7 +71,9 @@ def verify_admin(
 
 
 @router.post("/login")
+@limiter.limit("10/minute")
 def admin_login(
+    request: Request,
     authorization: str = Header(None),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -72,10 +89,10 @@ def admin_login(
     raise HTTPException(403, "管理员令牌无效")
 
 
-# ── User / admin list management (super admin only) ──────────────────────
+# ── Admin list management (super admin only) ────────────────────────────
 
-@router.get("/users")
-def admin_list_users(
+@router.get("/admins")
+def admin_list_admins(
     db: Session = Depends(get_db),
     _: None = Depends(verify_super_admin),
 ) -> list[dict]:
@@ -86,8 +103,8 @@ def admin_list_users(
     ]
 
 
-@router.post("/users", status_code=201)
-def admin_add_user(
+@router.post("/admins", status_code=201)
+def admin_add_admin(
     payload: AdminUserAction,
     db: Session = Depends(get_db),
     _: None = Depends(verify_super_admin),
@@ -99,14 +116,20 @@ def admin_add_user(
         existing.role = "admin"
         db.commit()
         return {"message": "已将用户提升为管理员", "fingerprint": payload.fingerprint}
-    user = User(fingerprint=payload.fingerprint, role="admin")
+    user = User(
+        username=f"fp_{payload.fingerprint[:12]}",
+        nickname=f"管理员_{payload.fingerprint[:8]}",
+        password_hash="",
+        fingerprint=payload.fingerprint,
+        role="admin",
+    )
     db.add(user)
     db.commit()
     return {"message": "已添加管理员", "fingerprint": payload.fingerprint}
 
 
-@router.delete("/users/{fingerprint}")
-def admin_remove_user(
+@router.delete("/admins/{fingerprint}")
+def admin_remove_admin(
     fingerprint: str,
     db: Session = Depends(get_db),
     _: None = Depends(verify_super_admin),
@@ -158,6 +181,7 @@ def admin_list_posts(
                 is_liked=False,
                 status=post.status,
                 ticket_status=post.ticket_status,
+                author=_get_author(post, db),
             )
         )
     return result
@@ -237,3 +261,41 @@ def admin_resolve_report(
         report.resolved_by = "admin"
     db.commit()
     return {"message": "举报已处理"}
+
+
+# ── 用户管理 ──────────────────────────────────────────
+
+@router.get("/users", response_model=list[AdminUserRead])
+def admin_list_users(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    search: str | None = Query(None, description="搜索用户名或昵称"),
+    banned: bool | None = Query(None),
+    db: Session = Depends(get_db),
+    _: str = Depends(verify_admin),
+) -> list[AdminUserRead]:
+    query = select(User)
+    if search:
+        pattern = f"%{search}%"
+        query = query.where(User.username.ilike(pattern) | User.nickname.ilike(pattern))
+    if banned is not None:
+        query = query.where(User.is_banned == banned)
+    query = query.order_by(User.created_at.desc()).offset(skip).limit(limit)
+    rows = db.scalars(query).all()
+    return [AdminUserRead.model_validate(r) for r in rows]
+
+
+@router.patch("/users/{user_id}/ban")
+def admin_ban_user(
+    user_id: int,
+    payload: AdminBanUser,
+    db: Session = Depends(get_db),
+    _: str = Depends(verify_admin),
+) -> dict:
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    user.is_banned = payload.banned
+    db.commit()
+    action = "封禁" if payload.banned else "解封"
+    return {"message": f"用户 {user.username} 已{action}", "is_banned": payload.banned}

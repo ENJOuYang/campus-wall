@@ -19,3 +19,18 @@ class AdminUserAction(BaseModel):
 
 class TicketStatusAction(BaseModel):
     ticket_status: str = Field(..., pattern="^(open|processing|completed|closed)$")
+
+
+class AdminBanUser(BaseModel):
+    banned: bool = True
+
+
+class AdminUserRead(BaseModel):
+    id: int
+    username: str
+    nickname: str
+    phone: str | None = None
+    email: str | None = None
+    is_banned: bool
+
+    model_config = {"from_attributes": True}
