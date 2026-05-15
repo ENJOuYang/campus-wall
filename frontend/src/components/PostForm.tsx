@@ -25,6 +25,7 @@ export function PostForm() {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fsTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -34,11 +35,17 @@ export function PostForm() {
   }, [previews]);
 
   const handleFileChange = (files: FileList | null) => {
-    if (!files) return;
-    previews.forEach((url) => URL.revokeObjectURL(url));
-    const fileArr = Array.from(files).slice(0, 9);
-    setSelectedFiles(fileArr);
-    setPreviews(fileArr.map((f) => URL.createObjectURL(f)));
+    if (!files || files.length === 0) return;
+    setSelectedFiles((prev) => {
+      const merged = [...prev, ...Array.from(files)].slice(0, 9);
+      return merged;
+    });
+    setPreviews((prev) => {
+      const newPreviews = Array.from(files).map((f) => URL.createObjectURL(f));
+      const merged = [...prev, ...newPreviews].slice(0, 9);
+      return merged;
+    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const removeFile = (index: number) => {
@@ -176,6 +183,7 @@ export function PostForm() {
         <div className={styles.row}>
           <label htmlFor="cw-images">图片（可选，最多 9 张）</label>
           <input
+            ref={fileInputRef}
             id="cw-images"
             type="file"
             accept="image/*"
