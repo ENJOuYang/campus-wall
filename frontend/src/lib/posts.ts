@@ -43,7 +43,7 @@ export type Report = {
 };
 
 export function getBackendBaseUrl(): string {
-  return process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
+  return process.env.NEXT_PUBLIC_BACKEND_URL ?? "";
 }
 
 export async function fetchPostList(
