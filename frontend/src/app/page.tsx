@@ -42,7 +42,7 @@ export default async function HomePage({ searchParams }: PageProps) {
         <p className={styles.heroDesc}>
           {tab === "hot"
             ? "按点赞数排序，最受欢迎的帖子优先展示。"
-            : "黑白简约布局，分区与发帖分类一致。"}
+            : "DS 社区 · 分区与发帖分类一致。"}
         </p>
       </section>
 

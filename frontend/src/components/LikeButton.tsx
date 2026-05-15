@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toggleLike } from "@/lib/posts";
 import { getFingerprint } from "@/lib/fingerprint";
 import styles from "./LikeButton.module.css";
@@ -15,6 +15,11 @@ export function LikeButton({ postId, initialCount, initialLiked }: Props) {
   const [liked, setLiked] = useState(initialLiked);
   const [count, setCount] = useState(initialCount);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    setLiked(initialLiked);
+    setCount(initialCount);
+  }, [initialLiked, initialCount]);
 
   const handleClick = useCallback(async () => {
     if (pending) return;

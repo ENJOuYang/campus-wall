@@ -24,7 +24,7 @@ export function SiteHeader() {
         <Link className={styles.brand} href="/">
           <span className={styles.brandText}>
             <span className={styles.brandName}>校园墙</span>
-            <span className={styles.brandTag}>Campus wall</span>
+            <span className={styles.brandTag}>DS Campus Wall</span>
           </span>
         </Link>
 

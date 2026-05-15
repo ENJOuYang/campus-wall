@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [inviteCode, setInviteCode] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -25,6 +26,10 @@ export default function RegisterPage() {
 
     if (!phone.trim() && !email.trim()) {
       setError("手机号和邮箱至少填写一个");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("两次输入的密码不一致");
       return;
     }
 
@@ -113,6 +118,20 @@ export default function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="至少 6 位"
+              required
+              minLength={6}
+              maxLength={128}
+            />
+          </label>
+
+          <label className={styles.label}>
+            确认密码 <span className={styles.required}>*</span>
+            <input
+              className={styles.input}
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="再次输入密码"
               required
               minLength={6}
               maxLength={128}
