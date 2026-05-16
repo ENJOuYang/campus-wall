@@ -57,24 +57,24 @@ export function SiteHeader() {
                     +发帖
                   </button>
                   <NotificationBell />
-                  <Link href={`/user/${user.username}`} className={styles.userTag}>{user.nickname}</Link>
+                  <Link href={`/user/${user.username}`} className={styles.userTag} prefetch={false}>{user.nickname}</Link>
                   <button className={styles.btnGhost} onClick={handleLogout}>
                     退出
                   </button>
                 </>
               ) : (
                 <>
-                  <Link className={styles.btnGhost} href="/login">
+                  <Link className={styles.btnGhost} href="/login" prefetch={false}>
                     登录
                   </Link>
-                  <Link className={styles.btnGhost} href="/register">
+                  <Link className={styles.btnGhost} href="/register" prefetch={false}>
                     注册
                   </Link>
                 </>
               )}
             </>
           )}
-          <Link className={styles.btnGhost} href="/admin">
+          <Link className={styles.btnGhost} href="/admin" prefetch={false}>
             管理
           </Link>
         </div>
