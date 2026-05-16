@@ -103,7 +103,7 @@ def admin_list_admins(
 ) -> list[dict]:
     rows = db.scalars(select(User).where(User.role == "admin").order_by(User.created_at.desc())).all()
     return [
-        {"id": u.id, "fingerprint": u.fingerprint, "role": u.role, "created_at": u.created_at.isoformat()}
+        {"id": u.id, "username": u.username, "nickname": u.nickname, "role": u.role, "created_at": u.created_at.isoformat()}
         for u in rows
     ]
 
@@ -114,37 +114,28 @@ def admin_add_admin(
     db: Session = Depends(get_db),
     _: None = Depends(verify_super_admin),
 ) -> dict:
-    existing = db.scalar(select(User).where(User.fingerprint == payload.fingerprint))
-    if existing:
-        if existing.role == "admin":
-            raise HTTPException(400, "该用户已是管理员")
-        existing.role = "admin"
-        db.commit()
-        return {"message": "已将用户提升为管理员", "fingerprint": payload.fingerprint}
-    user = User(
-        username=f"fp_{payload.fingerprint[:12]}",
-        nickname=f"管理员_{payload.fingerprint[:8]}",
-        password_hash="",
-        fingerprint=payload.fingerprint,
-        role="admin",
-    )
-    db.add(user)
+    existing = db.scalar(select(User).where(User.username == payload.username))
+    if not existing:
+        raise HTTPException(404, "该用户不存在")
+    if existing.role == "admin":
+        raise HTTPException(400, "该用户已是管理员")
+    existing.role = "admin"
     db.commit()
-    return {"message": "已添加管理员", "fingerprint": payload.fingerprint}
+    return {"message": f"已将 {existing.username} 提升为管理员", "username": existing.username}
 
 
-@router.delete("/admins/{fingerprint}")
+@router.delete("/admins/{user_id}")
 def admin_remove_admin(
-    fingerprint: str,
+    user_id: int,
     db: Session = Depends(get_db),
     _: None = Depends(verify_super_admin),
 ) -> dict:
-    user = db.scalar(select(User).where(User.fingerprint == fingerprint, User.role == "admin"))
+    user = db.scalar(select(User).where(User.id == user_id, User.role == "admin"))
     if user is None:
         raise HTTPException(404, "管理员不存在")
     user.role = "user"
     db.commit()
-    return {"message": "已移除管理员", "fingerprint": fingerprint}
+    return {"message": f"已移除管理员 {user.username}", "username": user.username}
 
 
 # ── Post management ──────────────────────────────────────────────────────

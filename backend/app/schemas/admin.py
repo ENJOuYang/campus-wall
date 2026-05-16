@@ -14,7 +14,7 @@ class AdminResolveReport(BaseModel):
 
 
 class AdminUserAction(BaseModel):
-    fingerprint: str = Field(..., min_length=1, max_length=64)
+    username: str = Field(..., min_length=1, max_length=50)
 
 
 class TicketStatusAction(BaseModel):
