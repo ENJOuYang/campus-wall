@@ -75,7 +75,7 @@ def get_invite_code() -> dict:
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-@limiter.limit("3/minute")
+@limiter.limit("10/minute")
 def register(request: Request, payload: UserRegister, db: Session = Depends(get_db)) -> TokenResponse:
     # Invite code check
     if settings.invite_secret:
@@ -109,7 +109,7 @@ def register(request: Request, payload: UserRegister, db: Session = Depends(get_
 
 
 @router.post("/login", response_model=TokenResponse)
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
 def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
     user = db.scalar(
         select(User).where(

@@ -13,7 +13,7 @@ MAX_FILE_SIZE = 5 * 1024 * 1024
 
 
 @router.post("")
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
 async def upload_image(request: Request, file: UploadFile = File(...)) -> dict:
     ext = os.path.splitext(file.filename or "image.jpg")[1].lower()
     if ext not in ALLOWED_EXTENSIONS:

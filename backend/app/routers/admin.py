@@ -76,7 +76,7 @@ def verify_admin(
 
 
 @router.post("/login")
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
 def admin_login(
     request: Request,
     authorization: str = Header(None),

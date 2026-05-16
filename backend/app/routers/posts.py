@@ -150,7 +150,7 @@ def get_post(
 
 
 @router.post("", response_model=PostRead, status_code=201)
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 def create_post(
     request: Request,
     payload: PostCreate,
@@ -360,7 +360,7 @@ def list_comments(
 
 
 @router.post("/{post_id}/comments", response_model=CommentRead, status_code=201)
-@limiter.limit("10/minute")
+@limiter.limit("20/minute")
 def create_comment(
     request: Request,
     post_id: int,
@@ -416,7 +416,7 @@ def create_comment(
 
 
 @router.post("/{post_id}/report", status_code=201)
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 def create_report(
     request: Request,
     post_id: int,
