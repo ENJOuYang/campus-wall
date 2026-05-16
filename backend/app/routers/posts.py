@@ -315,12 +315,12 @@ def list_comments(
     like_counts = {}
     user_liked: set[int] = set()
     if comment_ids:
-        like_rows = db.scalars(
+        like_rows = db.execute(
             select(Like.comment_id, func.count().label("cnt"))
             .where(Like.comment_id.in_(comment_ids))
             .group_by(Like.comment_id)
         ).all()
-        like_counts = {c.comment_id: c.cnt for c in like_rows}
+        like_counts = {row.comment_id: row.cnt for row in like_rows}
         if fingerprint:
             liked_rows = db.scalars(
                 select(Like.comment_id).where(
