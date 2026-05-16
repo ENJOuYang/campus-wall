@@ -133,7 +133,10 @@ def create_post(
     current_user: User | None = Depends(_get_optional_user),
     authorization: str | None = Header(None),
 ) -> PostRead:
-    if current_user and current_user.is_banned:
+    if current_user is None:
+        raise HTTPException(401, "请先登录后再发帖")
+
+    if current_user.is_banned:
         raise HTTPException(403, "您的账号已被封禁，无法发帖")
 
     if payload.category == "notice" and not _is_admin(authorization, db):
@@ -149,7 +152,7 @@ def create_post(
         image_urls=image_urls_str,
         status=post_status,
         ticket_status=ticket_status,
-        user_id=current_user.id if current_user else None,
+        user_id=None if payload.anonymous else current_user.id,
     )
     db.add(post)
     db.commit()

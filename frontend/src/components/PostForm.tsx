@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { hasAdminToken, uploadImage } from "@/lib/posts";
@@ -16,10 +17,16 @@ function getUserToken(): string {
   return localStorage.getItem("cw_token") ?? "";
 }
 
+function isLoggedIn(): boolean {
+  return !!getUserToken() || !!getAdminToken();
+}
+
 export function PostForm() {
   const router = useRouter();
   const isAdmin = hasAdminToken();
+  const loggedIn = isLoggedIn();
   const [pending, setPending] = useState(false);
+  const [anonymous, setAnonymous] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -113,7 +120,7 @@ export function PostForm() {
       const res = await fetch("/api/posts", {
         method: "POST",
         headers,
-        body: JSON.stringify({ title, body, category, image_urls: uploadedUrls }),
+        body: JSON.stringify({ title, body, category, image_urls: uploadedUrls, anonymous }),
       });
       if (!res.ok) {
         const t = await res.text();
@@ -140,6 +147,23 @@ export function PostForm() {
       setPending(false);
     }
   };
+
+  if (!loggedIn) {
+    return (
+      <div className={styles.wrap}>
+        <div className={styles.card}>
+          <h2 className={styles.title}>发帖</h2>
+          <p className={styles.loginHint}>
+            请先
+            <Link href="/login" className={styles.loginLink}>登录</Link>
+            或
+            <Link href="/register" className={styles.loginLink}>注册</Link>
+            后再发帖。
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.wrap}>
@@ -222,6 +246,14 @@ export function PostForm() {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+        {!isAdmin && (
+          <div className={styles.row}>
+            <label className={styles.checkLabel}>
+              <input type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} />
+              {" "}匿名发布
+            </label>
           </div>
         )}
         <button className={styles.submit} type="submit" disabled={pending}>

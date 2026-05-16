@@ -13,6 +13,7 @@ class PostCreate(BaseModel):
     body: str = Field(..., min_length=1, max_length=10000)
     category: str = Field(default="general", max_length=50)
     image_urls: list[str] = Field(default_factory=list)
+    anonymous: bool = Field(default=False)
 
 
 class PostRead(BaseModel):

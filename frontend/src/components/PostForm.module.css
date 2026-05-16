@@ -331,3 +331,36 @@
   font-size: 1rem;
   line-height: 1.7;
 }
+
+.loginHint {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.loginLink {
+  color: var(--fg);
+  font-weight: 600;
+  text-decoration: underline;
+  margin: 0 0.2rem;
+}
+
+.loginLink:hover {
+  opacity: 0.8;
+}
+
+.checkLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.checkLabel input[type="checkbox"] {
+  width: auto;
+  accent-color: var(--fg);
+  cursor: pointer;
+}
