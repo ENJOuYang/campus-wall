@@ -29,6 +29,7 @@ class UserResponse(BaseModel):
     nickname: str
     phone: str | None = None
     email: str | None = None
+    role: str = "user"
     created_at: datetime
     is_banned: bool = False
 

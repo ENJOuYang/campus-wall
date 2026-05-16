@@ -149,6 +149,20 @@ export async function toggleCommentLike(
   return res.json();
 }
 
+export async function deleteComment(postId: number, commentId: number): Promise<void> {
+  const headers: Record<string, string> = {};
+  const token = getStoredToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${getBackendBaseUrl()}/api/posts/${postId}/comments/${commentId}`, {
+    method: "DELETE",
+    headers,
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(t || "删除失败");
+  }
+}
+
 export async function fetchComments(postId: number, fingerprint = ""): Promise<Comment[]> {
   const params = fingerprint ? `?fingerprint=${encodeURIComponent(fingerprint)}` : "";
   const res = await fetch(`${getBackendBaseUrl()}/api/posts/${postId}/comments${params}`, {

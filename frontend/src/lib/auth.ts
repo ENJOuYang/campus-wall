@@ -6,6 +6,7 @@ export type UserInfo = {
   nickname: string;
   phone: string | null;
   email: string | null;
+  role: string;
   created_at: string;
 };
 
@@ -37,11 +38,17 @@ export function getStoredUser(): UserInfo | null {
 function saveAuth(token: string, user: UserInfo) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  if (user.role === "admin" || user.role === "super_admin") {
+    sessionStorage.setItem("admin_token", token);
+    sessionStorage.setItem("admin_role", user.role);
+  }
 }
 
 export function clearAuth() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  sessionStorage.removeItem("admin_token");
+  sessionStorage.removeItem("admin_role");
 }
 
 export async function register(params: {

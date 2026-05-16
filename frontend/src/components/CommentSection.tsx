@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Comment } from "@/lib/posts";
-import { createComment, fetchComments, formatRelativeTime } from "@/lib/posts";
+import { createComment, deleteComment, fetchComments, formatRelativeTime } from "@/lib/posts";
 import { getStoredToken } from "@/lib/auth";
+import { useAuth } from "@/lib/auth-context";
 import { getFingerprint } from "@/lib/fingerprint";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import { LikeButton } from "./LikeButton";
@@ -36,6 +37,8 @@ function CommentItem({
   replyBody,
   onReplyBodyChange,
   replyPending,
+  onDelete,
+  currentUsername,
   depth = 0,
 }: {
   comment: Comment;
@@ -47,8 +50,11 @@ function CommentItem({
   replyBody: string;
   onReplyBodyChange: (v: string) => void;
   replyPending: boolean;
+  onDelete: (commentId: number) => void;
+  currentUsername: string | null;
   depth?: number;
 }) {
+  const isCommentOwner = !!(currentUsername && comment.author && comment.author.username === currentUsername);
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onReplySubmit(comment.id, replyBody.trim());
@@ -85,6 +91,11 @@ function CommentItem({
         <button className={styles.replyBtn} onClick={() => onReply(comment.id)}>
           回复
         </button>
+        {isCommentOwner && (
+          <button className={styles.deleteBtn} onClick={() => { if (confirm("确定删除这条评论吗？")) onDelete(comment.id); }}>
+            删除
+          </button>
+        )}
       </div>
 
       {replyingTo === comment.id && (
@@ -122,6 +133,8 @@ function CommentItem({
               replyBody={replyBody}
               onReplyBodyChange={onReplyBodyChange}
               replyPending={replyPending}
+              onDelete={onDelete}
+              currentUsername={currentUsername}
               depth={depth + 1}
             />
           ))}
@@ -132,6 +145,7 @@ function CommentItem({
 }
 
 export function CommentSection({ postId }: Props) {
+  const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -197,6 +211,15 @@ export function CommentSection({ postId }: Props) {
     }
   };
 
+  const handleDelete = async (commentId: number) => {
+    try {
+      await deleteComment(postId, commentId);
+      load();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "删除失败");
+    }
+  };
+
   if (loading) return <p className={styles.loading}>加载评论中...</p>;
   if (error) return <p className={styles.error}>{error}</p>;
 
@@ -252,6 +275,8 @@ export function CommentSection({ postId }: Props) {
               replyBody={replyBody}
               onReplyBodyChange={setReplyBody}
               replyPending={replyPending}
+              onDelete={handleDelete}
+              currentUsername={user?.username ?? null}
               depth={0}
             />
           ))}

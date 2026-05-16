@@ -433,6 +433,29 @@ def create_comment(
     return result
 
 
+@router.delete("/{post_id}/comments/{comment_id}")
+def delete_comment(
+    post_id: int,
+    comment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(_get_optional_user),
+) -> dict:
+    if current_user is None:
+        raise HTTPException(401, "请先登录")
+    comment = db.get(Comment, comment_id)
+    if comment is None or comment.post_id != post_id:
+        raise HTTPException(status_code=404, detail="评论不存在")
+    if comment.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(403, "仅可删除自己的评论")
+    # Delete child replies first
+    child_replies = db.scalars(select(Comment).where(Comment.parent_id == comment_id)).all()
+    for child in child_replies:
+        db.delete(child)
+    db.delete(comment)
+    db.commit()
+    return {"message": "评论已删除"}
+
+
 @router.post("/{post_id}/report", status_code=201)
 @limiter.limit("10/minute")
 def create_report(

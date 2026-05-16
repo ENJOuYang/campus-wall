@@ -50,8 +50,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const cached = getStoredUser();
     if (token && cached) {
       setUser(cached);
+      if (cached.role === "admin" || cached.role === "super_admin") {
+        sessionStorage.setItem("admin_token", token);
+        sessionStorage.setItem("admin_role", cached.role);
+      }
       fetchMe()
-        .then(setUser)
+        .then((u) => {
+          setUser(u);
+          if (u.role === "admin" || u.role === "super_admin") {
+            sessionStorage.setItem("admin_token", token);
+            sessionStorage.setItem("admin_role", u.role);
+          }
+        })
         .catch(() => {
           clearAuth();
           setUser(null);
