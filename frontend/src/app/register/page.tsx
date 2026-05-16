@@ -145,7 +145,7 @@ export default function RegisterPage() {
               type="text"
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value)}
-              placeholder="10分钟刷新一次，问群主获取"
+              placeholder="无需填写"
               maxLength={16}
             />
           </label>
