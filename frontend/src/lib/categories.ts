@@ -1,32 +1,35 @@
 import type { Post } from "@/lib/posts";
 
-export type PostCategorySlug = "casual" | "study" | "notice" | "ticket";
+export type PostCategorySlug = "casual" | "study" | "domestic" | "international" | "help" | "notice" | "ticket";
 
 export type NavTabSlug = "all" | "hot" | PostCategorySlug;
 
 export const NAV_TABS: { slug: NavTabSlug; label: string; href: string }[] = [
   { slug: "all", label: "全部", href: "/" },
   { slug: "hot", label: "热门", href: "/?tab=hot" },
-  { slug: "casual", label: "日常灌水", href: "/?tab=casual" },
+  { slug: "casual", label: "闲话", href: "/?tab=casual" },
   { slug: "study", label: "学习·文化课", href: "/?tab=study" },
+  { slug: "domestic", label: "国内部", href: "/?tab=domestic" },
+  { slug: "international", label: "国际部", href: "/?tab=international" },
+  { slug: "help", label: "求助", href: "/?tab=help" },
   { slug: "notice", label: "公告", href: "/?tab=notice" },
   { slug: "ticket", label: "工单", href: "/?tab=ticket" },
 ];
 
 const LABELS: Record<string, string> = {
-  casual: "日常灌水",
+  casual: "闲话",
   study: "学习·文化课",
+  domestic: "国内部",
+  international: "国际部",
+  help: "求助",
   notice: "公告",
   ticket: "工单",
   general: "综合",
-  lost: "失物招领",
-  confession: "表白",
-  rant: "吐槽",
 };
 
 export function parseTab(raw: string | string[] | undefined): NavTabSlug {
   const v = typeof raw === "string" ? raw : raw?.[0];
-  const allowed: NavTabSlug[] = ["all", "hot", "casual", "study", "notice", "ticket"];
+  const allowed: NavTabSlug[] = ["all", "hot", "casual", "study", "domestic", "international", "help", "notice", "ticket"];
   if (v && allowed.includes(v as NavTabSlug)) return v as NavTabSlug;
   return "all";
 }

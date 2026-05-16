@@ -16,8 +16,11 @@ const PAGE_SIZE = 20;
 const EMPTY_MESSAGES: Record<string, string> = {
   all: "还没有帖子，来发第一帖吧。",
   hot: "暂无热门帖子。",
-  casual: "暂无灌水帖，来闲聊吧。",
+  casual: "暂无闲话，来聊聊吧。",
   study: "暂无学习帖，来分享知识吧。",
+  domestic: "暂无国内部帖子。",
+  international: "暂无国际部帖子。",
+  help: "暂无求助帖。",
   notice: "暂无公告。",
   ticket: "暂无工单，有需求就来提。",
 };

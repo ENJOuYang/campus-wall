@@ -189,8 +189,11 @@ export function PostForm() {
         <div className={styles.row}>
           <label htmlFor="cw-category">分区</label>
           <select id="cw-category" name="category" defaultValue="casual">
-            <option value="casual">日常灌水</option>
+            <option value="casual">闲话</option>
             <option value="study">学习·文化课</option>
+            <option value="domestic">国内部</option>
+            <option value="international">国际部</option>
+            <option value="help">求助</option>
             {isAdmin && <option value="notice">公告</option>}
             <option value="ticket">工单</option>
           </select>
