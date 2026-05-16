@@ -168,13 +168,17 @@ def admin_list_posts(
             image_urls = json.loads(post.image_urls) if post.image_urls else []
         except (json.JSONDecodeError, TypeError):
             pass
+        created_at = post.created_at
+        if created_at and created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+
         result.append(
             PostRead(
                 id=post.id,
                 title=post.title,
                 body=post.body,
                 category=post.category,
-                created_at=post.created_at,
+                created_at=created_at,
                 image_urls=image_urls,
                 view_count=post.view_count or 0,
                 like_count=like_count,

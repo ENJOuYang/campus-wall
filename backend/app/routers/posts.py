@@ -1,4 +1,5 @@
 import json
+from datetime import timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from sqlalchemy import func, select
@@ -65,12 +66,16 @@ def _post_to_read(post: Post, db: Session, fingerprint: str | None = None) -> Po
         is_liked = db.scalar(
             select(select(Like).where(Like.post_id == post.id, Like.fingerprint == fingerprint).exists())
         ) or False
+    created_at = post.created_at
+    if created_at and created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+
     return PostRead(
         id=post.id,
         title=post.title,
         body=post.body,
         category=post.category,
-        created_at=post.created_at,
+        created_at=created_at,
         image_urls=_parse_image_urls(post),
         view_count=post.view_count or 0,
         like_count=like_count,
