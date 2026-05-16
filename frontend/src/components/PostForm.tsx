@@ -128,7 +128,7 @@ export function PostForm() {
         uploadedUrls.push(url);
       }
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      const token = getUserToken() || getAdminToken();
+      const token = getAdminToken() || getUserToken();
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const res = await fetch("/api/posts", {
         method: "POST",
