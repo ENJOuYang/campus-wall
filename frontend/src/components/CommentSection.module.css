@@ -97,6 +97,16 @@
   color: var(--fg-soft);
 }
 
+.authorLink {
+  color: var(--fg-soft);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.authorLink:hover {
+  text-decoration: underline;
+}
+
 .time {
   color: var(--muted);
   font-family: var(--font-mono);

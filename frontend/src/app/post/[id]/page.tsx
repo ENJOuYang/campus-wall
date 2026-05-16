@@ -89,7 +89,7 @@ export default function PostDetailPage() {
         <div className={styles.head}>
           <span>#{post.id}</span>
           <span className={styles.badge}>{categoryLabel(post.category)}</span>
-          {post.author && <span className={styles.authorBy}>{post.author.nickname || post.author.username}</span>}
+          {post.author && <Link href={`/user/${post.author.username}`} className={styles.authorBy}>{post.author.nickname || post.author.username}</Link>}
           {post.category === "ticket" && post.ticket_status && (
             <span className={`${styles.badge} ${styles.ticketBadge}`}>{ticketStatusLabel(post.ticket_status)}</span>
           )}

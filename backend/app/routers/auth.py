@@ -2,14 +2,18 @@ import hashlib
 import hmac
 import time
 
+from datetime import timezone
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.auth import create_access_token, decode_access_token, hash_password, verify_password
 from app.config import settings
 from app.database import get_db
 from app.config import limiter
+from app.models.like import Like
+from app.models.post import Post
 from app.models.user import User
 from app.schemas.auth import GateVerify, TokenResponse, UserLogin, UserRegister, UserResponse
 
@@ -122,3 +126,48 @@ def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)) -
 @router.get("/me", response_model=UserResponse)
 def me(current_user: User = Depends(get_current_user)) -> UserResponse:
     return UserResponse.model_validate(current_user)
+
+
+# ── Public user profile ─────────────────────────────────────────────────
+
+@router.get("/users/{username}")
+def user_profile(username: str, db: Session = Depends(get_db)) -> dict:
+    user = db.scalar(select(User).where(User.username == username))
+    if user is None:
+        raise HTTPException(404, "用户不存在")
+
+    posts = db.scalars(
+        select(Post).where(Post.user_id == user.id, Post.status == "approved")
+        .order_by(Post.created_at.desc())
+        .limit(30)
+    ).all()
+
+    from app.schemas.post import AuthorInfo
+
+    post_list = []
+    for p in posts:
+        like_count = db.scalar(select(func.count()).select_from(Like).where(Like.post_id == p.id)) or 0
+        created_at = p.created_at
+        if created_at and created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        post_list.append({
+            "id": p.id,
+            "title": p.title,
+            "category": p.category,
+            "created_at": created_at.isoformat(),
+            "view_count": p.view_count or 0,
+            "like_count": int(like_count),
+        })
+
+    created_at = user.created_at
+    if created_at and created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+
+    return {
+        "id": user.id,
+        "username": user.username,
+        "nickname": user.nickname,
+        "created_at": created_at.isoformat(),
+        "post_count": len(post_list),
+        "posts": post_list,
+    }

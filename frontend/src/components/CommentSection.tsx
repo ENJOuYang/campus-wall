@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Comment } from "@/lib/posts";
 import { createComment, fetchComments, formatRelativeTime } from "@/lib/posts";
@@ -85,7 +86,7 @@ export function CommentSection({ postId }: Props) {
           {comments.map((c) => (
             <li key={c.id} className={styles.item}>
               <div className={styles.commentHead}>
-                <span className={styles.author}>{c.author ? (c.author.nickname || c.author.username) : "匿名用户"}</span>
+                <span className={styles.author}>{c.author ? <Link href={`/user/${c.author.username}`} className={styles.authorLink}>{c.author.nickname || c.author.username}</Link> : "匿名用户"}</span>
                 <time dateTime={c.created_at} className={styles.time}>
                   {formatRelativeTime(c.created_at)}
                 </time>

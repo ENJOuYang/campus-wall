@@ -57,6 +57,11 @@
   color: var(--fg-soft);
   font-weight: 600;
   font-family: var(--font-sans);
+  text-decoration: none;
+}
+
+.authorBy:hover {
+  text-decoration: underline;
 }
 
 .ticketBadge {
