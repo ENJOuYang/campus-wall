@@ -234,3 +234,76 @@
   border-left: 2px solid color-mix(in srgb, var(--border) 50%, transparent);
   padding-left: 0.75rem;
 }
+
+@media (max-width: 480px) {
+  .section {
+    margin-top: 1.25rem;
+  }
+
+  .title {
+    font-size: 0.9rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .textarea {
+    font-size: 0.82rem;
+    padding: 0.5rem 0.6rem;
+    min-height: 3.5rem;
+  }
+
+  .submit {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.76rem;
+  }
+
+  .list {
+    gap: 0.5rem;
+  }
+
+  .item {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .commentHead {
+    font-size: 0.65rem;
+    gap: 0.35rem;
+  }
+
+  .commentActions {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .replyBtn {
+    font-size: 0.68rem;
+  }
+
+  .replyBtn,
+  .replySubmit,
+  .replyCancel {
+    min-height: 2.5rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .replyForm {
+    padding: 0.4rem;
+  }
+
+  .replyInput {
+    font-size: 0.78rem;
+    padding: 0.35rem 0.45rem;
+    min-height: 2.4rem;
+  }
+
+  .replyItem {
+    padding-left: 0.5rem;
+  }
+
+  .loading,
+  .empty,
+  .error {
+    padding: 1rem;
+    font-size: 0.78rem;
+  }
+}

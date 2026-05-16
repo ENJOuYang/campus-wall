@@ -364,3 +364,34 @@
   accent-color: var(--fg);
   cursor: pointer;
 }
+
+@media (max-width: 480px) {
+  .wrap {
+    padding: 0 0.5rem 1rem;
+  }
+
+  .card {
+    padding: 1rem 0.85rem;
+  }
+
+  .row input,
+  .row textarea,
+  .row select {
+    font-size: 0.82rem;
+    padding: 0.45rem 0.55rem;
+  }
+
+  .previewItem {
+    width: 4rem;
+    height: 4rem;
+  }
+
+  .fullscreenBar {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .fullscreenTextarea {
+    padding: 0.85rem;
+    font-size: 0.9rem;
+  }
+}

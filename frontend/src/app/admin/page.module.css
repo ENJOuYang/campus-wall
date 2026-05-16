@@ -60,3 +60,56 @@
 
 .loading, .errorMsg, .empty { padding: 2rem; text-align: center; font-size: 0.85rem; color: var(--muted); }
 .errorMsg { color: var(--fg); }
+
+@media (max-width: 640px) {
+  .main {
+    padding: 1rem 0.5rem 2rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .title {
+    font-size: 1.1rem;
+  }
+
+  .tabs {
+    flex-wrap: wrap;
+    gap: 0;
+  }
+
+  .tab {
+    padding: 0.4rem 0.65rem;
+    font-size: 0.75rem;
+  }
+
+  .filterRow {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .select {
+    max-width: 100%;
+    font-size: 0.75rem;
+  }
+
+  .table {
+    font-size: 0.72rem;
+  }
+
+  .table th, .table td {
+    padding: 0.45rem 0.5rem;
+  }
+
+  .btnApprove, .btnReject, .btnDelete {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.68rem;
+    min-height: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+  }
+}

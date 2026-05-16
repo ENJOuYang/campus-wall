@@ -91,3 +91,25 @@
 }
 
 .msgError { color: var(--fg); }
+
+@media (max-width: 480px) {
+  .modal {
+    padding: 1.25rem 1rem;
+  }
+
+  .title {
+    font-size: 0.88rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .textarea {
+    font-size: 0.82rem;
+    min-height: 5rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .cancel, .submit {
+    padding: 0.4rem 0.85rem;
+    font-size: 0.78rem;
+  }
+}

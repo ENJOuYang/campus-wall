@@ -132,7 +132,41 @@
 
 .postStats {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   font-size: 0.7rem;
   color: var(--muted);
+}
+
+@media (max-width: 480px) {
+  .main {
+    padding: 1rem 0.5rem 2rem;
+  }
+
+  .card {
+    padding: 1.25rem 1rem;
+  }
+
+  .avatar {
+    width: 3.25rem;
+    height: 3.25rem;
+    font-size: 1.3rem;
+  }
+
+  .nickname {
+    font-size: 1.1rem;
+  }
+
+  .postItem {
+    padding: 0.7rem 0.85rem;
+  }
+
+  .postTitle {
+    font-size: 0.82rem;
+  }
+
+  .sectionTitle {
+    font-size: 0.9rem;
+    margin-top: 1.5rem;
+  }
 }

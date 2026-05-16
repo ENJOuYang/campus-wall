@@ -32,3 +32,11 @@
   color: var(--fg);
   border-color: var(--border-strong);
 }
+
+@media (max-width: 480px) {
+  .btn {
+    min-height: 2.25rem;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.78rem;
+  }
+}

@@ -80,3 +80,25 @@
   color: var(--fg);
   box-shadow: var(--shadow-sm);
 }
+
+@media (max-width: 480px) {
+  .hero {
+    padding: 1rem 0.5rem 0.75rem;
+  }
+
+  .heroTitle {
+    font-size: 1.3rem;
+  }
+
+  .heroDesc {
+    font-size: 0.82rem;
+  }
+
+  .inner {
+    padding: 0 0.5rem;
+  }
+
+  .sectionHead {
+    margin-bottom: 0.65rem;
+  }
+}

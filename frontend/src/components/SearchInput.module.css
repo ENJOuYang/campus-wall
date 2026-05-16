@@ -64,11 +64,13 @@
   .wrap {
     order: 2;
     margin-right: 0;
+    flex: 1 0 100%;
+    max-width: 100%;
   }
 
   .input {
     width: 100%;
-    min-width: 8rem;
+    min-width: 0;
   }
 
   .input:focus {

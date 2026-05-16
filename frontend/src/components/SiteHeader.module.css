@@ -193,16 +193,45 @@
   transform: translateY(0);
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
+  .inner {
+    gap: 0.35rem;
+    padding: 0.35rem clamp(0.5rem, 2vw, 0.75rem);
+  }
+
   .brandTag {
     display: none;
   }
-  .btnGhost {
-    font-size: 0.72rem;
-    padding: 0.35rem 0.6rem;
+
+  .brandName {
+    font-size: 0.92rem;
   }
-  .userTag {
-    max-width: 4rem;
+
+  .navWrap {
+    padding-top: 0.25rem;
+    margin: 0 calc(-1 * clamp(0.5rem, 2vw, 0.75rem));
+    padding-left: clamp(0.5rem, 2vw, 0.75rem);
+    padding-right: clamp(0.5rem, 2vw, 0.75rem);
+  }
+
+  .tab {
+    padding: 0.35rem 0.55rem;
     font-size: 0.72rem;
+  }
+
+  .actions {
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  .btnGhost {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .userTag {
+    max-width: 3.5rem;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.35rem;
   }
 }

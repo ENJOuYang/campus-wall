@@ -119,3 +119,28 @@
   background: var(--muted-bg);
   border-color: var(--border-strong);
 }
+
+@media (max-width: 480px) {
+  .main {
+    padding: 1rem 0.5rem;
+  }
+
+  .card {
+    padding: 1.25rem 1rem;
+  }
+
+  .h1 {
+    font-size: 1.15rem;
+    margin-bottom: 1rem;
+  }
+
+  .input {
+    font-size: 0.85rem;
+    padding: 0.45rem 0.6rem;
+  }
+
+  .btn {
+    padding: 0.55rem;
+    font-size: 0.88rem;
+  }
+}

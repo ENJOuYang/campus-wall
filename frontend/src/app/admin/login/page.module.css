@@ -50,3 +50,23 @@
 .submit:hover:not(:disabled) { opacity: 0.9; }
 .submit:disabled { opacity: 0.4; cursor: not-allowed; }
 .error { margin: 0.75rem 0 0; font-size: 0.8rem; color: var(--fg); }
+
+@media (max-width: 480px) {
+  .main {
+    margin-top: 2rem;
+    padding: 0 0.5rem;
+  }
+
+  .card {
+    padding: 1.25rem 1rem;
+  }
+
+  .title {
+    font-size: 1rem;
+  }
+
+  .input {
+    font-size: 0.85rem;
+    padding: 0.45rem 0.55rem;
+  }
+}
