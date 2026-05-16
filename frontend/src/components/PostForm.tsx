@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { hasAdminToken, uploadImage } from "@/lib/posts";
+import { hasAdminToken, isSuperAdmin, uploadImage } from "@/lib/posts";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import styles from "./PostForm.module.css";
 
@@ -264,7 +264,7 @@ export function PostForm() {
             ))}
           </div>
         )}
-        {!isAdmin && (
+        {!isSuperAdmin() && (
           <div className={styles.row}>
             <label className={styles.checkLabel}>
               <input type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} />
