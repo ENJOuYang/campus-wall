@@ -90,6 +90,20 @@ export async function fetchPostById(id: number, fingerprint = ""): Promise<Post>
   return (await res.json()) as Post;
 }
 
+export async function deletePost(postId: number): Promise<void> {
+  const headers: Record<string, string> = {};
+  const token = getStoredToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${getBackendBaseUrl()}/api/posts/${postId}`, {
+    method: "DELETE",
+    headers,
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(t || "删除失败");
+  }
+}
+
 export async function uploadImage(file: File): Promise<string> {
   const fd = new FormData();
   fd.append("file", file);

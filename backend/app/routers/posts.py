@@ -149,6 +149,24 @@ def get_post(
     return _post_to_read(post, db, fingerprint)
 
 
+@router.delete("/{post_id}")
+def delete_post(
+    post_id: int,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(_get_optional_user),
+) -> dict:
+    if current_user is None:
+        raise HTTPException(401, "请先登录")
+    post = db.get(Post, post_id)
+    if post is None:
+        raise HTTPException(status_code=404, detail="帖子不存在")
+    if post.user_id != current_user.id:
+        raise HTTPException(403, "仅可删除自己的帖子")
+    db.delete(post)
+    db.commit()
+    return {"message": "帖子已删除"}
+
+
 @router.post("", response_model=PostRead, status_code=201)
 @limiter.limit("10/minute")
 def create_post(

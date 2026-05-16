@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Post } from "@/lib/posts";
-import { fetchPostById, formatRelativeTime, incrementView } from "@/lib/posts";
+import { deletePost, fetchPostById, formatRelativeTime, incrementView } from "@/lib/posts";
 import { categoryLabel, ticketStatusLabel } from "@/lib/categories";
 import { getFingerprint } from "@/lib/fingerprint";
+import { useAuth } from "@/lib/auth-context";
 import { LikeButton } from "@/components/LikeButton";
 import { CommentSection } from "@/components/CommentSection";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
@@ -15,13 +16,30 @@ import styles from "./page.module.css";
 
 export default function PostDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const id = parseInt(String(params.id), 10);
+  const { user } = useAuth();
 
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewCount, setViewCount] = useState(0);
   const [reportOpen, setReportOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const isOwner = !!(user && post?.author && user.username === post.author.username);
+
+  const handleDelete = async () => {
+    if (!confirm("确定删除这条帖子吗？此操作不可撤销。")) return;
+    setDeleting(true);
+    try {
+      await deletePost(id);
+      router.push("/");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "删除失败");
+      setDeleting(false);
+    }
+  };
 
   useEffect(() => {
     if (isNaN(id)) {
@@ -116,6 +134,11 @@ export default function PostDetailPage() {
 
       <div className={styles.actions}>
         <LikeButton postId={post.id} initialCount={post.like_count} initialLiked={post.is_liked} />
+        {isOwner && (
+          <button className={styles.reportBtn} onClick={handleDelete} disabled={deleting}>
+            {deleting ? "删除中..." : "删除"}
+          </button>
+        )}
         <button className={styles.reportBtn} onClick={() => setReportOpen(true)}>
           举报
         </button>
