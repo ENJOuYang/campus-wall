@@ -11,6 +11,11 @@ function getAdminToken(): string {
   return sessionStorage.getItem("admin_token") ?? "";
 }
 
+function getUserToken(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem("cw_token") ?? "";
+}
+
 export function PostForm() {
   const router = useRouter();
   const isAdmin = hasAdminToken();
@@ -103,7 +108,7 @@ export function PostForm() {
         uploadedUrls.push(url);
       }
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      const token = getAdminToken();
+      const token = getUserToken() || getAdminToken();
       if (token) headers["Authorization"] = `Bearer ${token}`;
       const res = await fetch("/api/posts", {
         method: "POST",

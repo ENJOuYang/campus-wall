@@ -1,3 +1,8 @@
+function getStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("cw_token");
+}
+
 export type AuthorInfo = {
   username: string;
   nickname: string;
@@ -93,9 +98,12 @@ export async function toggleLike(
   postId: number,
   fingerprint: string
 ): Promise<{ liked: boolean; like_count: number }> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = getStoredToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`/api/posts/${postId}/like`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ fingerprint }),
   });
   if (!res.ok) throw new Error("操作失败");
@@ -115,9 +123,12 @@ export async function createComment(
   body: string,
   fingerprint: string
 ): Promise<Comment> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = getStoredToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`/api/posts/${postId}/comments`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ body, fingerprint }),
   });
   if (!res.ok) {
@@ -140,9 +151,12 @@ export async function submitReport(
   reason: string,
   fingerprint: string
 ): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = getStoredToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`/api/posts/${postId}/report`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ reason, fingerprint }),
   });
   if (!res.ok) {
