@@ -64,6 +64,8 @@ export function PostList({ initialItems, initialTotal, tab }: Props) {
   const tabFiltered = useMemo(() => filterPostsByTab(allItems, tab), [allItems, tab]);
   const visible = useMemo(() => searchPosts(tabFiltered, query), [tabFiltered, query]);
 
+  const catParam = useMemo(() => (tab !== "all" && tab !== "hot") ? tab : "", [tab]);
+
   const loadMore = useCallback(async () => {
     if (loadingRef.current) return;
     loadingRef.current = true;
@@ -71,7 +73,7 @@ export function PostList({ initialItems, initialTotal, tab }: Props) {
     setError(null);
     try {
       const sort = tab === "hot" ? "hot" : "latest";
-      const data = await fetchPostList(allItems.length, PAGE_SIZE, sort, fp.current);
+      const data = await fetchPostList(allItems.length, PAGE_SIZE, sort, fp.current, catParam);
       setAllItems((prev) => [...prev, ...data.items]);
       setTotal(data.total);
     } catch (e) {
@@ -87,7 +89,7 @@ export function PostList({ initialItems, initialTotal, tab }: Props) {
     const refresh = async () => {
       try {
         const sort = tab === "hot" ? "hot" : "latest";
-        const data = await fetchPostList(0, initialItems.length || PAGE_SIZE, sort, fp.current);
+        const data = await fetchPostList(0, initialItems.length || PAGE_SIZE, sort, fp.current, catParam);
         setAllItems(data.items);
         setTotal(data.total);
       } catch {

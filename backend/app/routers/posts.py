@@ -103,9 +103,15 @@ def list_posts(
     limit: int = Query(20, ge=1, le=100),
     sort: str = Query("latest", pattern="^(latest|hot)$"),
     fingerprint: str | None = Query(None),
+    category: str | None = Query(None),
 ) -> PostList:
-    base_query = select(Post).where(Post.status == "approved")
-    total = db.scalar(select(func.count()).select_from(Post).where(Post.status == "approved")) or 0
+    filters = [Post.status == "approved"]
+    if category:
+        filters.append(Post.category == category)
+
+    base_query = select(Post).where(*filters)
+    count_query = select(func.count()).select_from(Post).where(*filters)
+    total = db.scalar(count_query) or 0
 
     if sort == "hot":
         like_sub = (

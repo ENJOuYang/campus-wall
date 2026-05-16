@@ -22,7 +22,8 @@ export default async function HomePage({ searchParams }: PageProps) {
 
   try {
     const sort = tab === "hot" ? "hot" : "latest";
-    const data = await fetchPostList(0, 20, sort);
+    const category = (tab !== "all" && tab !== "hot") ? tab : "";
+    const data = await fetchPostList(0, 20, sort, "", category);
     items = data.items;
     total = data.total;
   } catch (e) {

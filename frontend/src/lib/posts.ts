@@ -59,10 +59,12 @@ export async function fetchPostList(
   skip = 0,
   limit = 20,
   sort = "latest",
-  fingerprint = ""
+  fingerprint = "",
+  category = ""
 ): Promise<PostListResponse> {
   const params = new URLSearchParams({ skip: String(skip), limit: String(limit), sort });
   if (fingerprint) params.set("fingerprint", fingerprint);
+  if (category) params.set("category", category);
   const url = `${getBackendBaseUrl()}/api/posts?${params}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
