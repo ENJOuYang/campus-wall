@@ -317,9 +317,10 @@ export async function adminSetTicketStatus(postId: number, ticketStatus: string)
   }
 }
 
-export async function adminFetchPosts(status?: string): Promise<Post[]> {
-  const params = status ? `?status=${status}` : "";
-  const res = await adminFetch(`/api/admin/posts${params}`);
+export async function adminFetchPosts(status?: string, skip = 0, limit = 50): Promise<Post[]> {
+  const params = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+  if (status) params.set("status", status);
+  const res = await adminFetch(`/api/admin/posts?${params}`);
   if (!res.ok) throw new Error("加载失败");
   return res.json();
 }
@@ -333,9 +334,10 @@ export async function adminActOnPost(postId: number, action: string): Promise<vo
   if (!res.ok) throw new Error("操作失败");
 }
 
-export async function adminFetchReports(resolved?: boolean): Promise<Report[]> {
-  const params = resolved !== undefined ? `?resolved=${resolved}` : "";
-  const res = await adminFetch(`/api/admin/reports${params}`);
+export async function adminFetchReports(resolved?: boolean, skip = 0, limit = 50): Promise<Report[]> {
+  const params = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+  if (resolved !== undefined) params.set("resolved", String(resolved));
+  const res = await adminFetch(`/api/admin/reports?${params}`);
   if (!res.ok) throw new Error("加载失败");
   return res.json();
 }

@@ -49,19 +49,23 @@ export default function AdminDashboardPage() {
   const [postStatus, setPostStatus] = useState<string>("");
   const [reportFilter, setReportFilter] = useState<boolean | undefined>(undefined);
   const [newUsername, setNewUsername] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
   const superAdmin = isSuperAdmin();
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!hasAdminToken()) { router.push("/admin/login"); return; }
-    loadData();
+    setPage(1);
+    loadData(1);
   }, [tab, postStatus, reportFilter]);
 
-  const loadData = async () => {
+  const loadData = async (p = page) => {
     setLoading(true); setError(null);
+    const skip = (p - 1) * pageSize;
     try {
-      if (tab === "posts") setPosts(await adminFetchPosts(postStatus || undefined));
-      else if (tab === "reports") setReports(await adminFetchReports(reportFilter));
+      if (tab === "posts") setPosts(await adminFetchPosts(postStatus || undefined, skip, pageSize));
+      else if (tab === "reports") setReports(await adminFetchReports(reportFilter, skip, pageSize));
       else if (tab === "users") setUsers(await adminFetchAdmins());
     } catch (e) {
       setError(e instanceof Error ? e.message : "加载失败");
@@ -69,30 +73,37 @@ export default function AdminDashboardPage() {
   };
 
   const handleActOnPost = async (postId: number, action: string) => {
-    try { await adminActOnPost(postId, action); loadData(); }
+    try { await adminActOnPost(postId, action); loadData(page); }
     catch (e) { setError(e instanceof Error ? e.message : "操作失败"); }
   };
 
   const handleResolveReport = async (reportId: number, resolved: boolean) => {
-    try { await adminResolveReport(reportId, resolved); loadData(); }
+    try { await adminResolveReport(reportId, resolved); loadData(page); }
     catch (e) { setError(e instanceof Error ? e.message : "操作失败"); }
   };
 
   const handleTicketStatus = async (postId: number, status: string) => {
-    try { await adminSetTicketStatus(postId, status); loadData(); }
+    try { await adminSetTicketStatus(postId, status); loadData(page); }
     catch (e) { setError(e instanceof Error ? e.message : "操作失败"); }
   };
+
+  const goPage = (p: number) => {
+    setPage(p);
+    loadData(p);
+  };
+
+  const hasMore = (tab === "posts" ? posts.length : reports.length) === pageSize;
 
   const handleAddAdmin = async () => {
     const name = newUsername.trim();
     if (!name) return;
-    try { await adminAddAdmin(name); setNewUsername(""); loadData(); inputRef.current?.focus(); }
+    try { await adminAddAdmin(name); setNewUsername(""); loadData(page); inputRef.current?.focus(); }
     catch (e) { setError(e instanceof Error ? e.message : "添加失败"); }
   };
 
   const handleRemoveAdmin = async (userId: number, username: string) => {
     if (!confirm(`确定移除管理员 ${username} 吗？`)) return;
-    try { await adminRemoveAdmin(userId); loadData(); }
+    try { await adminRemoveAdmin(userId); loadData(page); }
     catch (e) { setError(e instanceof Error ? e.message : "移除失败"); }
   };
 
@@ -175,6 +186,11 @@ export default function AdminDashboardPage() {
               {posts.length === 0 && <tr><td colSpan={9} className={styles.empty}>暂无数据</td></tr>}
             </tbody>
           </table>
+          <div className={styles.pagination}>
+            <button className={styles.pageBtn} disabled={page <= 1} onClick={() => goPage(page - 1)}>上一页</button>
+            <span className={styles.pageInfo}>第 {page} 页</span>
+            <button className={styles.pageBtn} disabled={!hasMore} onClick={() => goPage(page + 1)}>下一页</button>
+          </div>
         </div>
       ) : tab === "reports" ? (
         <div className={styles.tableWrap}>
@@ -195,6 +211,11 @@ export default function AdminDashboardPage() {
               {reports.length === 0 && <tr><td colSpan={7} className={styles.empty}>暂无数据</td></tr>}
             </tbody>
           </table>
+          <div className={styles.pagination}>
+            <button className={styles.pageBtn} disabled={page <= 1} onClick={() => goPage(page - 1)}>上一页</button>
+            <span className={styles.pageInfo}>第 {page} 页</span>
+            <button className={styles.pageBtn} disabled={!hasMore} onClick={() => goPage(page + 1)}>下一页</button>
+          </div>
         </div>
       ) : (
         <div>
