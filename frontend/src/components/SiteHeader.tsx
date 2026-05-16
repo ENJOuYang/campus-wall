@@ -52,7 +52,7 @@ export function SiteHeader() {
                     +发帖
                   </button>
                   <NotificationBell />
-                  <span className={styles.userTag}>{user.nickname}</span>
+                  <Link href={`/user/${user.username}`} className={styles.userTag}>{user.nickname}</Link>
                   <button className={styles.btnGhost} onClick={handleLogout}>
                     退出
                   </button>
