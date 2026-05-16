@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { hasAdminToken, isSuperAdmin, uploadImage } from "@/lib/posts";
+import { hasAdminToken, uploadImage } from "@/lib/posts";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
 import styles from "./PostForm.module.css";
 
@@ -264,14 +264,12 @@ export function PostForm() {
             ))}
           </div>
         )}
-        {!isSuperAdmin() && (
-          <div className={styles.row}>
-            <label className={styles.checkLabel}>
-              <input type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} />
-              {" "}匿名发布
-            </label>
-          </div>
-        )}
+        <div className={styles.row}>
+          <label className={styles.checkLabel}>
+            <input type="checkbox" checked={anonymous} onChange={(e) => setAnonymous(e.target.checked)} />
+            {" "}匿名发布
+          </label>
+        </div>
         <button className={styles.submit} type="submit" disabled={pending}>
           {pending ? "提交中…" : "发布"}
         </button>
