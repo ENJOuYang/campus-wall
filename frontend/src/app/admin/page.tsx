@@ -32,7 +32,8 @@ const TICKET_STATUS_OPTIONS = [
 
 type AdminUser = {
   id: number;
-  fingerprint: string;
+  username: string;
+  nickname: string;
   role: string;
   created_at: string;
 };
@@ -47,7 +48,7 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [postStatus, setPostStatus] = useState<string>("");
   const [reportFilter, setReportFilter] = useState<boolean | undefined>(undefined);
-  const [newFingerprint, setNewFingerprint] = useState("");
+  const [newUsername, setNewUsername] = useState("");
   const superAdmin = isSuperAdmin();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -83,15 +84,15 @@ export default function AdminDashboardPage() {
   };
 
   const handleAddAdmin = async () => {
-    const fp = newFingerprint.trim();
-    if (!fp) return;
-    try { await adminAddAdmin(fp); setNewFingerprint(""); loadData(); inputRef.current?.focus(); }
+    const name = newUsername.trim();
+    if (!name) return;
+    try { await adminAddAdmin(name); setNewUsername(""); loadData(); inputRef.current?.focus(); }
     catch (e) { setError(e instanceof Error ? e.message : "添加失败"); }
   };
 
-  const handleRemoveAdmin = async (fingerprint: string) => {
-    if (!confirm(`确定移除管理员 ${fingerprint.slice(0, 12)}… 吗？`)) return;
-    try { await adminRemoveAdmin(fingerprint); loadData(); }
+  const handleRemoveAdmin = async (userId: number, username: string) => {
+    if (!confirm(`确定移除管理员 ${username} 吗？`)) return;
+    try { await adminRemoveAdmin(userId); loadData(); }
     catch (e) { setError(e instanceof Error ? e.message : "移除失败"); }
   };
 
@@ -201,27 +202,28 @@ export default function AdminDashboardPage() {
             <input
               ref={inputRef}
               className={styles.select}
-              style={{ flex: 1, maxWidth: "24rem", fontFamily: "var(--font-mono)" }}
+              style={{ flex: 1, maxWidth: "24rem" }}
               type="text"
-              value={newFingerprint}
-              onChange={(e) => setNewFingerprint(e.target.value)}
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleAddAdmin(); }}
-              placeholder="输入用户 fingerprint 以添加为管理员"
+              placeholder="输入用户名以添加为管理员"
             />
             <button className={styles.btnApprove} onClick={handleAddAdmin}>添加</button>
           </div>
           <div className={styles.tableWrap}>
             <table className={styles.table}>
-              <thead><tr><th>ID</th><th>Fingerprint</th><th>角色</th><th>添加时间</th><th>操作</th></tr></thead>
+              <thead><tr><th>ID</th><th>用户名</th><th>昵称</th><th>角色</th><th>添加时间</th><th>操作</th></tr></thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.id}>
                     <td className={styles.mono}>#{u.id}</td>
-                    <td className={styles.mono} style={{ fontSize: "0.72rem" }}>{u.fingerprint}</td>
+                    <td>{u.username}</td>
+                    <td>{u.nickname}</td>
                     <td>{u.role === "admin" ? "管理员" : u.role}</td>
                     <td className={styles.muted}>{formatRelativeTime(u.created_at)}</td>
                     <td>
-                      <button className={styles.btnDelete} onClick={() => handleRemoveAdmin(u.fingerprint)}>移除</button>
+                      <button className={styles.btnDelete} onClick={() => handleRemoveAdmin(u.id, u.username)}>移除</button>
                     </td>
                   </tr>
                 ))}

@@ -249,17 +249,17 @@ export async function adminLogin(token: string): Promise<{ ok: boolean; role?: s
   return { ok: true, role: data.role };
 }
 
-export async function adminFetchAdmins(): Promise<{ id: number; fingerprint: string; role: string; created_at: string }[]> {
+export async function adminFetchAdmins(): Promise<{ id: number; username: string; nickname: string; role: string; created_at: string }[]> {
   const res = await adminFetch("/api/admin/admins");
   if (!res.ok) throw new Error("加载失败");
   return res.json();
 }
 
-export async function adminAddAdmin(fingerprint: string): Promise<void> {
+export async function adminAddAdmin(username: string): Promise<void> {
   const res = await adminFetch("/api/admin/admins", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fingerprint }),
+    body: JSON.stringify({ username }),
   });
   if (!res.ok) {
     const t = await res.text();
@@ -267,8 +267,8 @@ export async function adminAddAdmin(fingerprint: string): Promise<void> {
   }
 }
 
-export async function adminRemoveAdmin(fingerprint: string): Promise<void> {
-  const res = await adminFetch(`/api/admin/admins/${encodeURIComponent(fingerprint)}`, {
+export async function adminRemoveAdmin(userId: number): Promise<void> {
+  const res = await adminFetch(`/api/admin/admins/${userId}`, {
     method: "DELETE",
   });
   if (!res.ok) {
