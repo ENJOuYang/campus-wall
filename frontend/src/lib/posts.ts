@@ -21,6 +21,7 @@ export type Post = {
   status: string;
   ticket_status: string | null;
   author: AuthorInfo | null;
+  is_owner: boolean;
 };
 
 export type PostListResponse = {
@@ -81,11 +82,31 @@ export async function fetchPostList(
 
 export async function fetchPostById(id: number, fingerprint = ""): Promise<Post> {
   const params = fingerprint ? `?fingerprint=${encodeURIComponent(fingerprint)}` : "";
+  const headers: Record<string, string> = {};
+  const token = getStoredToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${getBackendBaseUrl()}/api/posts/${id}${params}`, {
     cache: "no-store",
+    headers,
   });
   if (!res.ok) {
     throw new Error(res.status === 404 ? "帖子不存在" : `加载帖子失败：HTTP ${res.status}`);
+  }
+  return (await res.json()) as Post;
+}
+
+export async function setPostHidden(postId: number, hidden: boolean): Promise<Post> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = getStoredToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${getBackendBaseUrl()}/api/posts/${postId}/visibility`, {
+    method: "PATCH",
+    headers,
+    body: JSON.stringify({ hidden }),
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(t || "操作失败");
   }
   return (await res.json()) as Post;
 }

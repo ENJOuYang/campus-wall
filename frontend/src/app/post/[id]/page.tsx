@@ -4,10 +4,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { Post } from "@/lib/posts";
-import { deletePost, fetchPostById, formatRelativeTime, incrementView } from "@/lib/posts";
+import { deletePost, fetchPostById, formatRelativeTime, incrementView, setPostHidden } from "@/lib/posts";
 import { categoryLabel, ticketStatusLabel } from "@/lib/categories";
 import { getFingerprint } from "@/lib/fingerprint";
-import { useAuth } from "@/lib/auth-context";
 import { LikeButton } from "@/components/LikeButton";
 import { CommentSection } from "@/components/CommentSection";
 import { MarkdownRenderer } from "@/components/MarkdownRenderer";
@@ -18,16 +17,32 @@ export default function PostDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = parseInt(String(params.id), 10);
-  const { user } = useAuth();
-
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [viewCount, setViewCount] = useState(0);
   const [reportOpen, setReportOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
 
-  const isOwner = !!(user && post?.author && user.username === post.author.username);
+  const isOwner = !!post?.is_owner;
+
+  const handleVisibilityChange = async (hidden: boolean) => {
+    setUpdatingVisibility(true);
+    try {
+      const updated = await setPostHidden(id, hidden);
+      setPost(updated);
+      if (hidden) {
+        alert("帖子已隐藏，其他用户将无法看到。");
+      } else {
+        alert("帖子已恢复显示。");
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "操作失败");
+    } finally {
+      setUpdatingVisibility(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!confirm("确定删除这条帖子吗？此操作不可撤销。")) return;
@@ -135,9 +150,20 @@ export default function PostDetailPage() {
       <div className={styles.actions}>
         <LikeButton postId={post.id} initialCount={post.like_count} initialLiked={post.is_liked} />
         {isOwner && (
-          <button className={styles.reportBtn} onClick={handleDelete} disabled={deleting}>
-            {deleting ? "删除中..." : "删除"}
-          </button>
+          <>
+            {post.status === "rejected" ? (
+              <button className={styles.reportBtn} onClick={() => handleVisibilityChange(false)} disabled={updatingVisibility}>
+                {updatingVisibility ? "恢复中..." : "恢复显示"}
+              </button>
+            ) : (
+              <button className={styles.reportBtn} onClick={() => handleVisibilityChange(true)} disabled={updatingVisibility}>
+                {updatingVisibility ? "隐藏中..." : "隐藏"}
+              </button>
+            )}
+            <button className={styles.reportBtn} onClick={handleDelete} disabled={deleting}>
+              {deleting ? "删除中..." : "删除"}
+            </button>
+          </>
         )}
         <button className={styles.reportBtn} onClick={() => setReportOpen(true)}>
           举报

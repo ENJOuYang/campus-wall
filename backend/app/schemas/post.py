@@ -16,6 +16,10 @@ class PostCreate(BaseModel):
     anonymous: bool = Field(default=False)
 
 
+class PostVisibilityUpdate(BaseModel):
+    hidden: bool
+
+
 class PostRead(BaseModel):
     id: int
     title: str
@@ -29,6 +33,7 @@ class PostRead(BaseModel):
     status: str = "approved"
     ticket_status: str | None = None
     author: AuthorInfo | None = None
+    is_owner: bool = False
 
     model_config = {"from_attributes": True}
 

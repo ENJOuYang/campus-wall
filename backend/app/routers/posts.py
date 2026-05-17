@@ -17,7 +17,7 @@ from app.models.report import Report
 from app.models.user import User
 from app.schemas.comment import CommentCreate, CommentRead
 from app.schemas.like import LikeCreate, LikeToggleResponse
-from app.schemas.post import AuthorInfo, PostCreate, PostList, PostRead
+from app.schemas.post import AuthorInfo, PostCreate, PostList, PostRead, PostVisibilityUpdate
 from app.schemas.report import ReportCreate
 
 router = APIRouter(prefix="/posts", tags=["posts"])
@@ -66,7 +66,7 @@ def _parse_image_urls(post: Post) -> list[str]:
         return []
 
 
-def _post_to_read(post: Post, db: Session, fingerprint: str | None = None) -> PostRead:
+def _post_to_read(post: Post, db: Session, fingerprint: str | None = None, current_user: User | None = None) -> PostRead:
     like_count = db.scalar(
         select(func.count()).select_from(Like).where(Like.post_id == post.id)
     ) or 0
@@ -92,6 +92,7 @@ def _post_to_read(post: Post, db: Session, fingerprint: str | None = None) -> Po
         status=post.status,
         ticket_status=post.ticket_status,
         author=_get_author(post, db),
+        is_owner=bool(current_user and post.user_id == current_user.id),
     )
 
 
@@ -142,11 +143,34 @@ def get_post(
     post_id: int,
     db: Session = Depends(get_db),
     fingerprint: str | None = Query(None),
+    current_user: User | None = Depends(_get_optional_user),
 ) -> PostRead:
     post = db.get(Post, post_id)
-    if post is None or post.status == "rejected":
+    if post is None:
         raise HTTPException(status_code=404, detail="帖子不存在")
-    return _post_to_read(post, db, fingerprint)
+    if post.status == "rejected" and (current_user is None or post.user_id != current_user.id):
+        raise HTTPException(status_code=404, detail="帖子不存在")
+    return _post_to_read(post, db, fingerprint, current_user)
+
+
+@router.patch("/{post_id}/visibility", response_model=PostRead)
+def update_post_visibility(
+    post_id: int,
+    payload: PostVisibilityUpdate,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(_get_optional_user),
+) -> PostRead:
+    if current_user is None:
+        raise HTTPException(401, "请先登录")
+    post = db.get(Post, post_id)
+    if post is None:
+        raise HTTPException(status_code=404, detail="帖子不存在")
+    if post.user_id != current_user.id:
+        raise HTTPException(403, "只能修改自己的帖子可见性")
+    post.status = "rejected" if payload.hidden else "approved"
+    db.commit()
+    db.refresh(post)
+    return _post_to_read(post, db, current_user=current_user)
 
 
 @router.delete("/{post_id}")
@@ -161,7 +185,7 @@ def delete_post(
     if post is None:
         raise HTTPException(status_code=404, detail="帖子不存在")
     if post.user_id != current_user.id:
-        raise HTTPException(403, "仅可删除自己的帖子")
+        raise HTTPException(403, "只能删除自己的帖子")
     db.delete(post)
     db.commit()
     return {"message": "帖子已删除"}
@@ -200,7 +224,7 @@ def create_post(
     db.add(post)
     db.commit()
     db.refresh(post)
-    return _post_to_read(post, db)
+    return _post_to_read(post, db, current_user=current_user)
 
 
 @router.post("/{post_id}/view")
