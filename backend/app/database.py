@@ -60,12 +60,13 @@ def run_migration(engine):
         _add_column_if_missing(conn, "likes", "comment_id", "INTEGER REFERENCES comments(id) ON DELETE CASCADE")
 
         # partial unique index for comment likes
-        conn.execute(
-            sa.text(
-                "CREATE UNIQUE INDEX IF NOT EXISTS uq_comment_fingerprint "
-                "ON likes(comment_id, fingerprint) WHERE comment_id IS NOT NULL"
+        if sa.inspect(engine).has_table("likes"):
+            conn.execute(
+                sa.text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_comment_fingerprint "
+                    "ON likes(comment_id, fingerprint) WHERE comment_id IS NOT NULL"
+                )
             )
-        )
 
         # notifications: comment_id for reply/comment_like notifications
         _add_column_if_missing(conn, "notifications", "comment_id", "INTEGER REFERENCES comments(id) ON DELETE SET NULL")
