@@ -1,15 +1,13 @@
-import json
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.auth import decode_access_token
-from app.config import settings
-from app.database import get_db
 from app.config import limiter
-from app.models.like import Like
+from app.database import get_db
+from app.dependencies.auth import extract_bearer_token, get_admin_role, require_admin, require_super_admin
+from app.modules.post_reads import build_post_reads
 from app.models.post import Post
 from app.models.report import Report
 from app.models.user import User
@@ -21,58 +19,10 @@ from app.schemas.admin import (
     AdminUserRead,
     TicketStatusAction,
 )
-from app.schemas.post import AuthorInfo, PostRead
+from app.schemas.post import PostRead
 from app.schemas.report import ReportRead
 
 router = APIRouter(prefix="/admin", tags=["admin"])
-
-
-def _get_author(post: Post, db: Session) -> AuthorInfo | None:
-    if post.user_id:
-        user = db.get(User, post.user_id)
-        if user:
-            return AuthorInfo(username=user.username, nickname=user.nickname)
-    return None
-
-
-def _is_super_admin(token: str) -> bool:
-    return bool(settings.admin_token and token == settings.admin_token)
-
-
-def _is_admin_user(token: str, db: Session) -> bool:
-    if db.scalar(select(User).where(User.fingerprint == token, User.role == "admin")):
-        return True
-    user_id = decode_access_token(token)
-    if user_id:
-        user = db.get(User, user_id)
-        return user is not None and user.role == "admin"
-    return False
-
-
-def verify_super_admin(authorization: str = Header(None)) -> None:
-    if not settings.admin_token:
-        raise HTTPException(403, "管理员功能未启用")
-    if not authorization:
-        raise HTTPException(401, "未提供管理员令牌")
-    token = authorization.removeprefix("Bearer ").strip()
-    if not _is_super_admin(token):
-        raise HTTPException(403, "需要超级管理员权限")
-
-
-def verify_admin(
-    authorization: str = Header(None),
-    db: Session = Depends(get_db),
-) -> str:
-    if not settings.admin_token:
-        raise HTTPException(403, "管理员功能未启用")
-    if not authorization:
-        raise HTTPException(401, "未提供管理员令牌")
-    token = authorization.removeprefix("Bearer ").strip()
-    if _is_super_admin(token):
-        return ""
-    if _is_admin_user(token, db):
-        return token
-    raise HTTPException(403, "管理员令牌无效或权限不足")
 
 
 @router.post("/login")
@@ -82,15 +32,12 @@ def admin_login(
     authorization: str = Header(None),
     db: Session = Depends(get_db),
 ) -> dict:
-    if not settings.admin_token:
-        raise HTTPException(403, "管理员功能未启用")
-    if not authorization:
+    token = extract_bearer_token(authorization)
+    if token is None:
         raise HTTPException(401, "未提供管理员令牌")
-    token = authorization.removeprefix("Bearer ").strip()
-    if _is_super_admin(token):
-        return {"ok": True, "role": "super_admin"}
-    if _is_admin_user(token, db):
-        return {"ok": True, "role": "admin"}
+    role = get_admin_role(token, db)
+    if role is not None:
+        return {"ok": True, "role": role}
     raise HTTPException(403, "管理员令牌无效")
 
 
@@ -99,7 +46,7 @@ def admin_login(
 @router.get("/admins")
 def admin_list_admins(
     db: Session = Depends(get_db),
-    _: None = Depends(verify_super_admin),
+    _: None = Depends(require_super_admin),
 ) -> list[dict]:
     rows = db.scalars(select(User).where(User.role == "admin").order_by(User.created_at.desc())).all()
     return [
@@ -112,7 +59,7 @@ def admin_list_admins(
 def admin_add_admin(
     payload: AdminUserAction,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_super_admin),
+    _: None = Depends(require_super_admin),
 ) -> dict:
     existing = db.scalar(select(User).where(User.username == payload.username))
     if not existing:
@@ -128,7 +75,7 @@ def admin_add_admin(
 def admin_remove_admin(
     user_id: int,
     db: Session = Depends(get_db),
-    _: None = Depends(verify_super_admin),
+    _: None = Depends(require_super_admin),
 ) -> dict:
     user = db.scalar(select(User).where(User.id == user_id, User.role == "admin"))
     if user is None:
@@ -146,45 +93,14 @@ def admin_list_posts(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    _: str = Depends(require_admin),
 ) -> list[PostRead]:
     query = select(Post)
     if status:
         query = query.where(Post.status == status)
     query = query.order_by(Post.created_at.desc()).offset(skip).limit(limit)
     rows = db.scalars(query).all()
-
-    result = []
-    for post in rows:
-        like_count = db.scalar(
-            select(func.count()).select_from(Like).where(Like.post_id == post.id)
-        ) or 0
-        image_urls = []
-        try:
-            image_urls = json.loads(post.image_urls) if post.image_urls else []
-        except (json.JSONDecodeError, TypeError):
-            pass
-        created_at = post.created_at
-        if created_at and created_at.tzinfo is None:
-            created_at = created_at.replace(tzinfo=timezone.utc)
-
-        result.append(
-            PostRead(
-                id=post.id,
-                title=post.title,
-                body=post.body,
-                category=post.category,
-                created_at=created_at,
-                image_urls=image_urls,
-                view_count=post.view_count or 0,
-                like_count=like_count,
-                is_liked=False,
-                status=post.status,
-                ticket_status=post.ticket_status,
-                author=_get_author(post, db),
-            )
-        )
-    return result
+    return build_post_reads(db, rows)
 
 
 @router.patch("/posts/{post_id}")
@@ -192,7 +108,7 @@ def admin_act_on_post(
     post_id: int,
     action: AdminPostAction,
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    _: str = Depends(require_admin),
 ) -> dict:
     post = db.get(Post, post_id)
     if post is None:
@@ -212,7 +128,7 @@ def admin_set_ticket_status(
     post_id: int,
     payload: TicketStatusAction,
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    _: str = Depends(require_admin),
 ) -> dict:
     post = db.get(Post, post_id)
     if post is None:
@@ -232,7 +148,7 @@ def admin_list_reports(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    _: str = Depends(require_admin),
 ) -> list[ReportRead]:
     query = select(Report)
     if resolved is not None:
@@ -247,7 +163,7 @@ def admin_resolve_report(
     report_id: int,
     payload: AdminResolveReport,
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    _: str = Depends(require_admin),
 ) -> dict:
     report = db.get(Report, report_id)
     if report is None:
@@ -272,7 +188,7 @@ def admin_list_users(
     search: str | None = Query(None, description="搜索用户名或昵称"),
     banned: bool | None = Query(None),
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    _: str = Depends(require_admin),
 ) -> list[AdminUserRead]:
     query = select(User)
     if search:
@@ -290,7 +206,7 @@ def admin_ban_user(
     user_id: int,
     payload: AdminBanUser,
     db: Session = Depends(get_db),
-    _: str = Depends(verify_admin),
+    _: str = Depends(require_admin),
 ) -> dict:
     user = db.get(User, user_id)
     if user is None:

@@ -8,15 +8,14 @@ from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 
 from app.config import settings, limiter
-from app.database import Base, engine, run_migration
+from app.database import initialize_database
 from app.routers import posts, uploads, admin, auth, notifications
 
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    run_migration(engine)
-    Base.metadata.create_all(bind=engine)
+    initialize_database()
     yield
 
 

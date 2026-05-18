@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func, update
 from sqlalchemy.orm import Session
 
-from app.auth import decode_access_token
 from app.database import get_db
+from app.dependencies.auth import get_optional_user
 from app.models.notification import Notification
 from app.models.user import User
 from app.schemas.notification import NotificationRead
@@ -11,20 +11,10 @@ from app.schemas.notification import NotificationRead
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
-def _get_current_user(authorization: str | None = Header(None), db: Session = Depends(get_db)) -> User | None:
-    if not authorization:
-        return None
-    token = authorization.removeprefix("Bearer ").strip()
-    user_id = decode_access_token(token)
-    if user_id is None:
-        return None
-    return db.get(User, user_id)
-
-
 @router.get("", response_model=list[NotificationRead])
 def list_notifications(
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(_get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> list[NotificationRead]:
     if current_user is None:
         return []
@@ -35,9 +25,15 @@ def list_notifications(
         .limit(50)
     ).all()
 
+    from_user_ids = sorted({n.from_user_id for n in rows if n.from_user_id is not None})
+    from_users = {}
+    if from_user_ids:
+        users = db.scalars(select(User).where(User.id.in_(from_user_ids))).all()
+        from_users = {user.id: user for user in users}
+
     result = []
     for n in rows:
-        from_user = db.get(User, n.from_user_id) if n.from_user_id else None
+        from_user = from_users.get(n.from_user_id) if n.from_user_id else None
         result.append(
             NotificationRead(
                 id=n.id,
@@ -55,7 +51,7 @@ def list_notifications(
 @router.get("/unread-count")
 def unread_count(
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(_get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> dict:
     if current_user is None:
         return {"count": 0}
@@ -72,7 +68,7 @@ def unread_count(
 def mark_read(
     notification_id: int,
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(_get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> dict:
     if current_user is None:
         raise HTTPException(401)
@@ -87,7 +83,7 @@ def mark_read(
 @router.patch("/read-all")
 def mark_all_read(
     db: Session = Depends(get_db),
-    current_user: User | None = Depends(_get_current_user),
+    current_user: User | None = Depends(get_optional_user),
 ) -> dict:
     if current_user is None:
         raise HTTPException(401)

@@ -1,6 +1,6 @@
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import settings
@@ -10,6 +10,13 @@ engine = create_engine(
     connect_args={"check_same_thread": False} if settings.database_url.startswith("sqlite") else {},
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+if settings.database_url.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def _enable_sqlite_foreign_keys(dbapi_connection, _connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 class Base(DeclarativeBase):
@@ -71,6 +78,13 @@ def run_migration(engine):
         _add_column_if_missing(conn, "notifications", "comment_id", "INTEGER REFERENCES comments(id) ON DELETE SET NULL")
 
         conn.commit()
+
+
+def initialize_database() -> None:
+    inspector = inspect(engine)
+    if not inspector.get_table_names():
+        Base.metadata.create_all(bind=engine)
+    run_migration(engine)
 
 
 def get_db() -> Generator[Session, None, None]:

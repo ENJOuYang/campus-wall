@@ -2,17 +2,16 @@ import hashlib
 import hmac
 import time
 
-from datetime import timezone
-
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from sqlalchemy import func, or_, select
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.auth import create_access_token, decode_access_token, hash_password, verify_password
+from app.auth import create_access_token, hash_password, verify_password
 from app.config import settings
-from app.database import get_db
 from app.config import limiter
-from app.models.like import Like
+from app.database import get_db
+from app.dependencies.auth import get_current_user
+from app.modules.post_reads import ensure_utc, load_post_like_counts
 from app.models.post import Post
 from app.models.user import User
 from app.schemas.auth import GateVerify, TokenResponse, UserLogin, UserRegister, UserResponse
@@ -41,23 +40,6 @@ def _verify_invite(code: str) -> bool:
         hashlib.sha256,
     ).hexdigest()[:8]
     return code.strip() == expected or code.strip() == prev
-
-
-def get_current_user(
-    authorization: str = Header(None),
-    db: Session = Depends(get_db),
-) -> User:
-    if not authorization:
-        raise HTTPException(401, "未登录")
-    token = authorization.removeprefix("Bearer ").strip()
-    user_id = decode_access_token(token)
-    if user_id is None:
-        raise HTTPException(401, "登录已过期，请重新登录")
-    user = db.get(User, user_id)
-    if user is None:
-        raise HTTPException(401, "用户不存在")
-    return user
-
 
 @router.post("/gate")
 def gate_verify(payload: GateVerify) -> dict:
@@ -142,26 +124,20 @@ def user_profile(username: str, db: Session = Depends(get_db)) -> dict:
         .limit(30)
     ).all()
 
-    from app.schemas.post import AuthorInfo
-
     post_list = []
+    like_counts = load_post_like_counts(db, [post.id for post in posts])
     for p in posts:
-        like_count = db.scalar(select(func.count()).select_from(Like).where(Like.post_id == p.id)) or 0
-        created_at = p.created_at
-        if created_at and created_at.tzinfo is None:
-            created_at = created_at.replace(tzinfo=timezone.utc)
+        created_at = ensure_utc(p.created_at)
         post_list.append({
             "id": p.id,
             "title": p.title,
             "category": p.category,
             "created_at": created_at.isoformat(),
             "view_count": p.view_count or 0,
-            "like_count": int(like_count),
+            "like_count": like_counts.get(p.id, 0),
         })
 
-    created_at = user.created_at
-    if created_at and created_at.tzinfo is None:
-        created_at = created_at.replace(tzinfo=timezone.utc)
+    created_at = ensure_utc(user.created_at)
 
     return {
         "id": user.id,

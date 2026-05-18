@@ -2,8 +2,9 @@
 
 一个开源的校园社区平台，支持发帖、评论、点赞、通知等完整功能。
 
-- **后端**：FastAPI + SQLAlchemy + SQLite
+- **后端**：Go + SQLite（新实现位于 `backend-go/`）
 - **前端**：Next.js 15 (App Router)
+- **旧后端**：FastAPI + SQLAlchemy + SQLite（保留在 `backend/` 作为迁移参考）
 
 ## 功能
 
@@ -16,24 +17,32 @@
 
 ## 环境要求
 
-- Python 3.11+
+- Go 1.23+（或直接使用 Docker）
 - Node.js 18+
+- Docker 29+（可选，用于一键部署）
 
 ## 本地运行
 
-### 后端
+### Go 后端
+
+```bash
+cd backend-go
+cp .env.example .env
+go run .
+```
+
+- 健康检查：http://127.0.0.1:8000/health
+
+### 旧 Python 后端
 
 ```bash
 cd backend
 python3 -m venv .venv
-source .venv/bin/.venv
+source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
-
-- 健康检查：http://127.0.0.1:8000/health
-- API 文档：http://127.0.0.1:8000/docs
 
 ### 前端
 
@@ -47,17 +56,26 @@ npm run dev
 
 浏览器打开 http://127.0.0.1:3000。
 
+### Docker 部署
+
+```bash
+docker compose up --build
+```
+
+- 前端：http://127.0.0.1:3000
+- 后端：http://127.0.0.1:8000
+- 默认会使用 Go 后端 `backend-go/`
+
 ### 生产构建
 
 ```bash
-cd frontend
-npm run build
-npm run start
+docker compose up -d --build
 ```
 
 ## 环境变量
 
-- 后端：`backend/.env`（参考 `backend/.env.example`）
+- Go 后端：`backend-go/.env`（参考 `backend-go/.env.example`）
+- 旧 Python 后端：`backend/.env`（参考 `backend/.env.example`）
 - 前端：`frontend/.env.local`（主要是 `BACKEND_URL`，指向后端地址）
 
 ## API 概要
@@ -78,11 +96,14 @@ npm run start
 | GET | `/api/notifications` | 通知列表 |
 | POST | `/api/uploads` | 上传图片 |
 
-完整接口文档见 `/docs`。
-
 ## 项目结构
 
 ```
+backend-go/
+├── main.go             # Go API 入口
+├── Dockerfile          # Go 后端镜像
+└── *.go                # 路由、鉴权、数据库初始化
+
 backend/
 ├── app/
 │   ├── main.py          # FastAPI 入口
@@ -99,6 +120,7 @@ frontend/
 │   ├── app/             # Next.js App Router 页面
 │   ├── components/      # React 组件
 │   └── lib/             # 工具函数 & API 调用
+├── Dockerfile           # 前端镜像
 └── next.config.ts       # 代理配置
 ```
 
