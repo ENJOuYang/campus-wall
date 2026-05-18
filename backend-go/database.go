@@ -68,6 +68,7 @@ func initializeDatabase(db *sql.DB) error {
 			category TEXT NOT NULL DEFAULT 'general',
 			image_urls TEXT,
 			view_count INTEGER NOT NULL DEFAULT 0,
+			like_count INTEGER NOT NULL DEFAULT 0,
 			status TEXT NOT NULL DEFAULT 'approved',
 			ticket_status TEXT,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -125,6 +126,7 @@ func initializeDatabase(db *sql.DB) error {
 	}{
 		{"posts", "image_urls", "TEXT"},
 		{"posts", "view_count", "INTEGER NOT NULL DEFAULT 0"},
+		{"posts", "like_count", "INTEGER NOT NULL DEFAULT 0"},
 		{"posts", "status", "TEXT NOT NULL DEFAULT 'approved'"},
 		{"posts", "user_id", "INTEGER REFERENCES users(id) ON DELETE SET NULL"},
 		{"posts", "ticket_status", "TEXT"},
@@ -147,10 +149,14 @@ func initializeDatabase(db *sql.DB) error {
 
 	indexes := []string{
 		"CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_posts_status_created_at ON posts(status, created_at DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_posts_status_like_count_created_at ON posts(status, like_count DESC, created_at DESC)",
+		"CREATE INDEX IF NOT EXISTS idx_posts_status_category_like_count_created_at ON posts(status, category, like_count DESC, created_at DESC)",
 		"CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id)",
 		"CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_id)",
 		"CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id)",
 		"CREATE INDEX IF NOT EXISTS idx_likes_post_id ON likes(post_id)",
+		"CREATE INDEX IF NOT EXISTS idx_likes_post_id_non_comment ON likes(post_id) WHERE comment_id IS NULL",
 		"CREATE INDEX IF NOT EXISTS idx_likes_comment_id ON likes(comment_id)",
 		"CREATE INDEX IF NOT EXISTS idx_likes_user_id ON likes(user_id)",
 		"CREATE INDEX IF NOT EXISTS idx_reports_post_id ON reports(post_id)",
@@ -164,6 +170,17 @@ func initializeDatabase(db *sql.DB) error {
 		if _, err := db.Exec(stmt); err != nil {
 			return fmt.Errorf("exec index statement: %w", err)
 		}
+	}
+
+	if _, err := db.Exec(`
+		UPDATE posts
+		SET like_count = COALESCE((
+			SELECT COUNT(*)
+			FROM likes
+			WHERE likes.post_id = posts.id AND likes.comment_id IS NULL
+		), 0)
+	`); err != nil {
+		return fmt.Errorf("backfill post like counts: %w", err)
 	}
 
 	return nil

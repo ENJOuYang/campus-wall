@@ -1,14 +1,10 @@
 .env
 frontend/.env.local
 frontend/.env*.local
-.venv
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.mypy_cache/
 api.txt
 *.db
 .DS_Store
+benchdata/
 
 # frontend
 frontend/node_modules/

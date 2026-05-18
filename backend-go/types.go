@@ -16,18 +16,18 @@ type PostCreateRequest struct {
 }
 
 type PostRead struct {
-	ID         int64       `json:"id"`
-	Title      string      `json:"title"`
-	Body       string      `json:"body"`
-	Category   string      `json:"category"`
-	CreatedAt  string      `json:"created_at"`
-	ImageURLs  []string    `json:"image_urls"`
-	ViewCount  int         `json:"view_count"`
-	LikeCount  int         `json:"like_count"`
-	IsLiked    bool        `json:"is_liked"`
-	Status     string      `json:"status"`
-	TicketStatus *string   `json:"ticket_status"`
-	Author     *AuthorInfo `json:"author"`
+	ID           int64       `json:"id"`
+	Title        string      `json:"title"`
+	Body         string      `json:"body"`
+	Category     string      `json:"category"`
+	CreatedAt    string      `json:"created_at"`
+	ImageURLs    []string    `json:"image_urls"`
+	ViewCount    int         `json:"view_count"`
+	LikeCount    int         `json:"like_count"`
+	IsLiked      bool        `json:"is_liked"`
+	Status       string      `json:"status"`
+	TicketStatus *string     `json:"ticket_status"`
+	Author       *AuthorInfo `json:"author"`
 }
 
 type PostListResponse struct {
@@ -42,16 +42,16 @@ type CommentCreateRequest struct {
 }
 
 type CommentRead struct {
-	ID         int64       `json:"id"`
-	PostID     int64       `json:"post_id"`
-	Body       string      `json:"body"`
-	Fingerprint string     `json:"fingerprint"`
-	CreatedAt  string      `json:"created_at"`
-	Author     *AuthorInfo `json:"author"`
-	ParentID   *int64      `json:"parent_id"`
-	Replies    []CommentRead `json:"replies"`
-	LikeCount  int         `json:"like_count"`
-	IsLiked    bool        `json:"is_liked"`
+	ID          int64         `json:"id"`
+	PostID      int64         `json:"post_id"`
+	Body        string        `json:"body"`
+	Fingerprint string        `json:"fingerprint"`
+	CreatedAt   string        `json:"created_at"`
+	Author      *AuthorInfo   `json:"author"`
+	ParentID    *int64        `json:"parent_id"`
+	Replies     []CommentRead `json:"replies"`
+	LikeCount   int           `json:"like_count"`
+	IsLiked     bool          `json:"is_liked"`
 }
 
 type LikeCreateRequest struct {
@@ -69,14 +69,14 @@ type ReportCreateRequest struct {
 }
 
 type ReportRead struct {
-	ID         int64   `json:"id"`
-	PostID     int64   `json:"post_id"`
-	Reason     string  `json:"reason"`
-	Fingerprint string `json:"fingerprint"`
-	CreatedAt  string  `json:"created_at"`
-	Resolved   bool    `json:"resolved"`
-	ResolvedAt *string `json:"resolved_at"`
-	ResolvedBy *string `json:"resolved_by"`
+	ID          int64   `json:"id"`
+	PostID      int64   `json:"post_id"`
+	Reason      string  `json:"reason"`
+	Fingerprint string  `json:"fingerprint"`
+	CreatedAt   string  `json:"created_at"`
+	Resolved    bool    `json:"resolved"`
+	ResolvedAt  *string `json:"resolved_at"`
+	ResolvedBy  *string `json:"resolved_by"`
 }
 
 type GateVerifyRequest struct {
@@ -174,6 +174,7 @@ type postRecord struct {
 	Category     string
 	ImageURLsRaw sql.NullString
 	ViewCount    int
+	LikeCount    int
 	Status       string
 	TicketStatus sql.NullString
 	CreatedAt    string
@@ -190,15 +191,15 @@ type commentRecord struct {
 }
 
 type reportRecord struct {
-	ID         int64
-	PostID     int64
-	UserID     sql.NullInt64
-	Reason     string
+	ID          int64
+	PostID      int64
+	UserID      sql.NullInt64
+	Reason      string
 	Fingerprint string
-	CreatedAt  string
-	Resolved   bool
-	ResolvedAt sql.NullString
-	ResolvedBy sql.NullString
+	CreatedAt   string
+	Resolved    bool
+	ResolvedAt  sql.NullString
+	ResolvedBy  sql.NullString
 }
 
 type notificationRecord struct {

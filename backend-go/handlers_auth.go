@@ -214,7 +214,7 @@ func (s *Server) handleUserProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := s.db.QueryContext(r.Context(), `SELECT id, user_id, title, body, category, image_urls, view_count, status, ticket_status, created_at FROM posts WHERE user_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 30`, user.ID)
+	rows, err := s.db.QueryContext(r.Context(), `SELECT id, user_id, title, body, category, image_urls, view_count, like_count, status, ticket_status, created_at FROM posts WHERE user_id = ? AND status = 'approved' ORDER BY created_at DESC LIMIT 30`, user.ID)
 	if err != nil {
 		writeDetail(w, http.StatusInternalServerError, "加载失败")
 		return

@@ -125,7 +125,7 @@ func (s *Server) handleAdminListPosts(w http.ResponseWriter, r *http.Request) {
 		limit = 200
 	}
 
-	query := `SELECT id, user_id, title, body, category, image_urls, view_count, status, ticket_status, created_at FROM posts`
+	query := `SELECT id, user_id, title, body, category, image_urls, view_count, like_count, status, ticket_status, created_at FROM posts`
 	args := make([]any, 0)
 	if status != "" {
 		query += " WHERE status = ?"

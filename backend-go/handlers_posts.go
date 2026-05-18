@@ -49,19 +49,11 @@ func (s *Server) handleListPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	baseQuery := `SELECT p.id, p.user_id, p.title, p.body, p.category, p.image_urls, p.view_count, p.status, p.ticket_status, p.created_at
+	baseQuery := `SELECT p.id, p.user_id, p.title, p.body, p.category, p.image_urls, p.view_count, p.like_count, p.status, p.ticket_status, p.created_at
 		FROM posts p`
-	if sortBy == "hot" {
-		baseQuery += ` LEFT JOIN (
-			SELECT post_id, COUNT(*) AS cnt
-			FROM likes
-			WHERE comment_id IS NULL
-			GROUP BY post_id
-		) hot ON p.id = hot.post_id`
-	}
 	baseQuery += " WHERE " + where
 	if sortBy == "hot" {
-		baseQuery += " ORDER BY COALESCE(hot.cnt, 0) DESC, p.created_at DESC"
+		baseQuery += " ORDER BY p.like_count DESC, p.created_at DESC"
 	} else {
 		baseQuery += " ORDER BY p.created_at DESC"
 	}
@@ -291,6 +283,10 @@ func (s *Server) handleTogglePostLike(w http.ResponseWriter, r *http.Request) {
 			writeDetail(w, http.StatusInternalServerError, "操作失败")
 			return
 		}
+		if _, err := tx.ExecContext(r.Context(), `UPDATE posts SET like_count = CASE WHEN like_count > 0 THEN like_count - 1 ELSE 0 END WHERE id = ?`, postID); err != nil {
+			writeDetail(w, http.StatusInternalServerError, "操作失败")
+			return
+		}
 		liked = false
 	} else {
 		var userID any = nil
@@ -298,6 +294,10 @@ func (s *Server) handleTogglePostLike(w http.ResponseWriter, r *http.Request) {
 			userID = currentUser.ID
 		}
 		if _, err := tx.ExecContext(r.Context(), `INSERT INTO likes (post_id, comment_id, user_id, fingerprint, created_at) VALUES (?, NULL, ?, ?, ?)`, postID, userID, payload.Fingerprint, currentTimestamp()); err != nil {
+			writeDetail(w, http.StatusInternalServerError, "操作失败")
+			return
+		}
+		if _, err := tx.ExecContext(r.Context(), `UPDATE posts SET like_count = like_count + 1 WHERE id = ?`, postID); err != nil {
 			writeDetail(w, http.StatusInternalServerError, "操作失败")
 			return
 		}
@@ -310,7 +310,7 @@ func (s *Server) handleTogglePostLike(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var likeCount int
-	if err := tx.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM likes WHERE post_id = ? AND comment_id IS NULL`, postID).Scan(&likeCount); err != nil {
+	if err := tx.QueryRowContext(r.Context(), `SELECT like_count FROM posts WHERE id = ?`, postID).Scan(&likeCount); err != nil {
 		writeDetail(w, http.StatusInternalServerError, "操作失败")
 		return
 	}

@@ -40,6 +40,7 @@ func scanPost(scanner rowScanner) (postRecord, error) {
 		&post.Category,
 		&post.ImageURLsRaw,
 		&post.ViewCount,
+		&post.LikeCount,
 		&post.Status,
 		&post.TicketStatus,
 		&post.CreatedAt,
@@ -129,7 +130,7 @@ func (s *Server) getUserByAccount(ctx context.Context, account string) (*userRec
 }
 
 func (s *Server) getPostByID(ctx context.Context, id int64) (*postRecord, error) {
-	row := s.db.QueryRowContext(ctx, `SELECT id, user_id, title, body, category, image_urls, view_count, status, ticket_status, created_at FROM posts WHERE id = ?`, id)
+	row := s.db.QueryRowContext(ctx, `SELECT id, user_id, title, body, category, image_urls, view_count, like_count, status, ticket_status, created_at FROM posts WHERE id = ?`, id)
 	post, err := scanPost(row)
 	if err != nil {
 		return nil, err
@@ -200,29 +201,6 @@ func (s *Server) buildPostReads(ctx context.Context, posts []postRecord, fingerp
 		}
 	}
 
-	likeCounts := make(map[int64]int)
-	likeQuery := fmt.Sprintf("SELECT post_id, COUNT(*) FROM likes WHERE comment_id IS NULL AND post_id IN (%s) GROUP BY post_id", placeholders(len(postIDs)))
-	likeArgs := make([]any, len(postIDs))
-	for i, id := range postIDs {
-		likeArgs[i] = id
-	}
-	likeRows, err := s.db.QueryContext(ctx, likeQuery, likeArgs...)
-	if err != nil {
-		return nil, err
-	}
-	defer likeRows.Close()
-	for likeRows.Next() {
-		var postID int64
-		var count int
-		if err := likeRows.Scan(&postID, &count); err != nil {
-			return nil, err
-		}
-		likeCounts[postID] = count
-	}
-	if err := likeRows.Err(); err != nil {
-		return nil, err
-	}
-
 	likedPostIDs := make(map[int64]bool)
 	if strings.TrimSpace(fingerprint) != "" {
 		likedQuery := fmt.Sprintf("SELECT post_id FROM likes WHERE comment_id IS NULL AND fingerprint = ? AND post_id IN (%s)", placeholders(len(postIDs)))
@@ -264,7 +242,7 @@ func (s *Server) buildPostReads(ctx context.Context, posts []postRecord, fingerp
 			CreatedAt:    normalizeTimestamp(post.CreatedAt),
 			ImageURLs:    parseImageURLs(post.ImageURLsRaw.String),
 			ViewCount:    post.ViewCount,
-			LikeCount:    likeCounts[post.ID],
+			LikeCount:    post.LikeCount,
 			IsLiked:      likedPostIDs[post.ID],
 			Status:       post.Status,
 			TicketStatus: nullableString(sqlNullStringLike{String: post.TicketStatus.String, Valid: post.TicketStatus.Valid}),
